@@ -1,10 +1,17 @@
 from django.contrib import admin
-from .models import UserProfile, TravelPlan, Location, Schedule
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser, TravelPlan, Location, Schedule
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'phone', 'email')
-    search_fields = ('name', 'phone', 'email')
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+    list_display = ('id', 'username', 'email', 'phone')
+    search_fields = ('username', 'email', 'phone')
+    
+    fieldsets = (
+        (None, {'fields': ('username', 'password', 'email', 'phone')}),
+        ('權限', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
+    )
 
 @admin.register(TravelPlan)
 class TravelPlanAdmin(admin.ModelAdmin):

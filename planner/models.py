@@ -1,24 +1,24 @@
 from django.db import models
 from django.core.validators import RegexValidator, MinValueValidator
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 
-class UserProfile(models.Model):
-    name = models.CharField(max_length=50)
+class CustomUser(AbstractUser):
     phone = models.CharField(
         max_length=10,
         validators=[RegexValidator(regex=r'^\d{10}$', message='手機號碼需為 10 碼數字')]
     )
-    email = models.EmailField()
-    photo = models.ImageField(upload_to='avatars/', blank=True, null=True)
-
+    email = models.EmailField(unique=True)
+    
     def __str__(self):
-        return self.name
+        return self.username  # 或 self.email，看你想怎麼顯示
+
 
 class TravelPlan(models.Model):
     name = models.CharField(max_length=100)
     start_date = models.DateField()  # 格式可在表單輸入時設定 yyyy/mm/dd
     end_date = models.DateField()
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     def __str__(self):
         return f"{self.name} ({self.user.name})"
 

@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}首頁 - 日本旅遊規劃{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-nav">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('planning')">行程規劃</button>
+            <button class="nav-tab" onclick="switchTab('profile')">用戶管理</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- 行程規劃頁面 -->
+        <div id="planning" class="tab-content active">
+            <div class="search-section">
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="搜尋景點...">
+                    <select class="filter-select">
+                        <option>地區 ▼</option>
+                        <option>東京</option>
+                        <option>大阪</option>
+                        <option>京都</option>
+                        <option>沖繩</option>
+                    </select>
+                    <select class="filter-select">
+                        <option>類型 ▼</option>
+                        <option>寺廟神社</option>
+                        <option>現代景點</option>
+                        <option>自然風光</option>
+                        <option>美食</option>
+                    </select>
+                    <select class="filter-select">
+                        <option>評分 ▼</option>
+                        <option>5星</option>
+                        <option>4星以上</option>
+                        <option>3星以上</option>
+                    </select>
+                    <button class="search-btn">搜尋</button>
+                </div>
+            </div>
+
+            <div class="attractions-grid">
+                <!-- 動態加載景點卡片 -->
+                {% for attraction in attractions %}
+                <div class="attraction-card">
+                    {% if attraction.image %}
+                        <img src="{{ attraction.image.url }}" alt="{{ attraction.name }}" class="attraction-image">
+                    {% else %}
+                        <!-- 使用線上預設圖片，根據景點類型選擇不同圖片 -->
+                        {% if attraction.attraction_type.name == '寺廟神社' %}
+                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                        {% elif attraction.attraction_type.name == '現代景點' %}
+                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                        {% elif attraction.attraction_type.name == '自然風光' %}
+                            <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                        {% elif attraction.attraction_type.name == '美食' %}
+                            <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                        {% else %}
+                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                        {% endif %}
+                    {% endif %}
+                    <div class="attraction-info">
+                        <div class="attraction-name">{{ attraction.name }}</div>
+                        <div class="attraction-location">{{ attraction.region.name }}・{{ attraction.address }}</div>
+                        <div class="attraction-rating">{{ attraction.rating_stars }} {{ attraction.rating }}</div>
+                        <button class="add-to-plan-btn" data-attraction-id="{{ attraction.id }}">加入行程</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-attractions">
+                    <p>目前沒有景點資料，請先添加一些景點。</p>
+                    <p>你可以到 <a href="/admin/">管理後台</a> 添加景點資料。</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="my-itinerary">
+                <div class="itinerary-title">我的行程</div>
+                {% for trip in user_trips %}
+                <div class="itinerary-item">
+                    <div class="itinerary-date">{{ trip.title }}</div>
+                    <div class="itinerary-details">
+                        <div>
+                            <div class="trip-dates">{{ trip.start_date }} - {{ trip.end_date }}</div>
+                            <div class="trip-attractions">已規劃景點: {{ trip.attractions.count }}</div>
+                        </div>
+                        <div class="itinerary-actions">
+                            <button class="btn-small btn-edit" onclick="editTrip({{ trip.id }})">編輯</button>
+                            <button class="btn-small btn-delete" onclick="deleteTrip({{ trip.id }})">刪除</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-trips">
+                    <p>你還沒有創建任何行程，開始添加景點來創建你的第一個行程吧！</p>
+                </div>
+                {% endfor %}
+                
+                <div style="margin-top: 20px;">
+                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">第1天 09:00-14:00</div>
+                    <div style="color: #333; margin-bottom: 5px;">東京晴空塔</div>
+                    <div style="color: #666; font-size: 12px; margin-bottom: 15px;">從淺草站搭乘都營淺草線至押上站</div>
+
+                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">14:00-18:00</div>
+                    <div style="color: #333; margin-bottom: 5px;">淺草寺</div>
+                    <div style="color: #666; font-size: 12px; margin-bottom: 15px;">淺草站周邊徒步5分鐘</div>
+
+                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">18:00-21:00</div>
+                    <div style="color: #333; margin-bottom: 5px;">晚餐</div>
+                    <div style="color: #666; font-size: 12px;">在淺草老街享用天婦羅料理</div>
+                </div>
+
+                <button style="width: 100%; padding: 12px; background: #ff69b4; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer;">配置規劃時程表</button>
+            </div>
+        </div>
+
+        <!-- 用戶管理頁面 -->
+        <div id="profile" class="tab-content">
+            <div class="section-title">用戶管理</div>
+            
+            <form method="post" enctype="multipart/form-data" class="profile-form-container">
+                {% csrf_token %}
+                <div class="user-profile">
+                    <div class="profile-avatar">
+                        <div class="avatar-circle">
+                            {% if user.userprofile.avatar %}
+                                <img src="{{ user.userprofile.avatar.url }}" alt="用戶頭像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            {% else %}
+                                {{ user.username|first|upper }}
+                            {% endif %}
+                        </div>
+                        <input type="file" id="avatar-upload" name="avatar" accept="image/*" style="display: none;">
+                        <button type="button" class="upload-btn" onclick="document.getElementById('avatar-upload').click()">更換頭像</button>
+                    </div>
+                    
+                    <div class="profile-form">
+                        <div class="form-group">
+                            <label class="form-label">姓名</label>
+                            <input type="text" name="full_name" class="form-input" value="{{ user.get_full_name }}" placeholder="請輸入姓名">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">電子郵件</label>
+                            <input type="email" name="email" class="form-input" value="{{ user.email }}" placeholder="請輸入電子郵件">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">手機號碼</label>
+                            <input type="tel" name="phone" class="form-input" value="{% if user.userprofile %}{{ user.userprofile.phone }}{% endif %}" placeholder="請輸入手機號碼">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preferences-section">
+                    <div class="preferences-title">旅行偏好設置</div>
+                    <div class="preferences-form">
+                        <div class="form-group">
+                            <label class="form-label">喜好的旅遊類型</label>
+                            <select name="travel_type" class="form-input">
+                                <option value="culture" {% if user.userprofile.travel_type == 'culture' %}selected{% endif %}>文化體驗</option>
+                                <option value="nature" {% if user.userprofile.travel_type == 'nature' %}selected{% endif %}>自然風光</option>
+                                <option value="food" {% if user.userprofile.travel_type == 'food' %}selected{% endif %}>美食探索</option>
+                                <option value="shopping" {% if user.userprofile.travel_type == 'shopping' %}selected{% endif %}>購物娛樂</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">旅行預算範圍</label>
+                            <select name="budget_range" class="form-input">
+                                <option value="budget" {% if user.userprofile.budget_range == 'budget' %}selected{% endif %}>經濟型</option>
+                                <option value="mid" {% if user.userprofile.budget_range == 'mid' %}selected{% endif %}>中等型</option>
+                                <option value="luxury" {% if user.userprofile.budget_range == 'luxury' %}selected{% endif %}>高端型</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="save-btn">保存變更</button>
+                </div>
+            </form>
+
+            <div class="section-title">行程收藏與歷史記錄</div>
+            
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #333; margin-bottom: 15px;">最近的行程</h3>
+                <div class="itinerary-history">
+                    <div class="history-card">
+                        <div class="history-title">東京五日遊</div>
+                        <div class="history-date">2024/04/05</div>
+                        <button class="view-details-btn">查看詳情</button>
+                    </div>
+                    
+                    <div class="history-card">
+                        <div class="history-title">關西櫻花之旅</div>
+                        <div class="history-date">2023/11/19</div>
+                        <button class="view-details-btn">查看詳情</button>
+                    </div>
+                    
+                    <div class="history-card">
+                        <div class="history-title">北海道雪季</div>
+                        <div class="history-date">2023/01/20-2023/01/28</div>
+                        <button class="view-details-btn">查看詳情</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="color: #333; margin-bottom: 15px;">收藏的行程</h3>
+                <div class="favorites-grid">
+                    <div class="favorite-card">
+                        <div class="favorite-title">京都古蹟三日遊</div>
+                        <div class="favorite-author">作者：旅遊達人小林</div>
+                        <div class="favorite-stats">
+                            <span>❤️ 245人喜歡</span>
+                            <button class="view-details-btn">查看詳情</button>
+                        </div>
+                    </div>
+                    
+                    <div class="favorite-card">
+                        <div class="favorite-title">大阪美食地圖</div>
+                        <div class="favorite-author">作者：美食探險家大田</div>
+                        <div class="favorite-stats">
+                            <span>❤️ 345人喜歡</span>
+                            <button class="view-details-btn">查看詳情</button>
+                        </div>
+                    </div>
+                    
+                    <div class="favorite-card">
+                        <div class="favorite-title">東京購物漫遊之旅</div>
+                        <div class="favorite-author">作者：購物達人宅女</div>
+                        <div class="favorite-stats">
+                            <span>❤️ 245人喜歡</span>
+                            <button class="view-details-btn">查看詳情</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tabName) {
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        event.target.classList.add('active');
+        document.getElementById(tabName).classList.add('active');
+    }
+
+    // AJAX 加入行程功能
+    document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const attractionId = this.getAttribute('data-attraction-id');
+            fetch(`/add-to-plan/${attractionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.style.background = '#28a745';
+                    this.textContent = '已加入';
+                    setTimeout(() => {
+                        this.style.background = '#ff69b4';
+                        this.textContent = '加入行程';
+                    }, 2000);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

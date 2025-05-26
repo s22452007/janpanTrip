@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}註冊 - 日本旅遊規劃{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>加入我們</h2>
+            <p>創建您的帳號，開始規劃精彩的日本之旅</p>
+        </div>
+        
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first_name">姓氏</label>
+                    <input type="text" id="first_name" name="first_name" required 
+                           placeholder="請輸入姓氏">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">名字</label>
+                    <input type="text" id="last_name" name="last_name" required 
+                           placeholder="請輸入名字">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="username">用戶名</label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="請輸入用戶名">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">電子郵件</label>
+                <input type="email" id="email" name="email" required 
+                       placeholder="請輸入電子郵件">
+            </div>
+            
+            <div class="form-group">
+                <label for="password1">密碼</label>
+                <input type="password" id="password1" name="password1" required 
+                       placeholder="請輸入密碼">
+                <div class="password-hint">密碼至少需要8個字符</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password2">確認密碼</label>
+                <input type="password" id="password2" name="password2" required 
+                       placeholder="請再次輸入密碼">
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="agree_terms" required>
+                    <span class="checkmark"></span>
+                    我同意 <a href="#" class="terms-link">服務條款</a> 和 <a href="#" class="privacy-link">隱私政策</a>
+                </label>
+            </div>
+            
+            <button type="submit" class="auth-btn">註冊</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>已經有帳號？ <a href="{% url 'travel:login' %}">立即登入</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

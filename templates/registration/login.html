@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}登入 - 日本旅遊規劃{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>歡迎回來</h2>
+            <p>登入您的帳號開始規劃日本之旅</p>
+        </div>
+        
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">用戶名或電子郵件</label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="請輸入用戶名或電子郵件">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="請輸入密碼">
+            </div>
+            
+            <div class="form-options">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="remember_me">
+                    <span class="checkmark"></span>
+                    記住我
+                </label>
+                <a href="#" class="forgot-link">忘記密碼？</a>
+            </div>
+            
+            <button type="submit" class="auth-btn">登入</button>
+        </form>
+        
+        <div class="auth-divider">
+            <span>或</span>
+        </div>
+        
+        <div class="social-login">
+            <button class="social-btn google-btn">
+                <span>🔍</span>
+                使用 Google 登入
+            </button>
+            <button class="social-btn facebook-btn">
+                <span>📘</span>
+                使用 Facebook 登入
+            </button>
+        </div>
+        
+        <div class="auth-footer">
+            <p>還沒有帳號？ <a href="{% url 'travel:register' %}">立即註冊</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

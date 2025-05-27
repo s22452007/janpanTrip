@@ -14,6 +14,7 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('my-trips/', views.my_trips_view, name='my_trips'),
     path('settings/', views.settings_view, name='settings'),
+    path('card/', views.card_view, name='card'),
     
     # API 端點
     path('add-to-plan/<int:attraction_id>/', views.add_to_plan_view, name='add_to_plan'),

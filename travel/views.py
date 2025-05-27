@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.db.models import Q
 from .models import Attraction, Trip, UserProfile, Region, AttractionType
+from django.shortcuts import render
 import json
 
 def login_view(request):
@@ -228,3 +229,6 @@ def delete_trip_view(request, trip_id):
             return JsonResponse({'success': False, 'message': str(e)})
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
+
+def card_view(request):
+    return render(request, 'travel/card.html')

@@ -832,6 +832,7 @@ body {
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer; /* 添加指針樣式 */
 }
 
 .attraction-card:hover {
@@ -867,6 +868,24 @@ body {
     margin-bottom: 10px;
 }
 
+/* 更新按鈕樣式 - 從 add-to-plan-btn 改為 view-detail-btn */
+.view-detail-btn {
+    width: 100%;
+    padding: 10px;
+    background: #ff69b4; /* 查看詳情 */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.view-detail-btn:hover {
+    background: #747d85; /* hover 時的深灰色 */
+}
+
+/* 保留舊的按鈕樣式以防其他地方使用 */
 .add-to-plan-btn {
     width: 100%;
     padding: 10px;
@@ -882,25 +901,6 @@ body {
 .add-to-plan-btn:hover {
     background: #e55aa0;
 }
-
-.no-attractions, .no-trips {
-    text-align: center;
-    padding: 2rem;
-    color: #666;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin: 1rem 0;
-}
-
-.no-attractions a {
-    color: #ff69b4;
-    text-decoration: none;
-}
-
-.no-attractions a:hover {
-    text-decoration: underline;
-}
-
 /* 行程管理 */
 .my-itinerary {
     background: #f8f9fa;

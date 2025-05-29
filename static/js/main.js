@@ -176,7 +176,7 @@ function searchAttractions() {
         });
 }
 
-// 更新景點網格
+// 更新搜索結果的景點卡片生成函數
 function updateAttractionsGrid(attractions) {
     const grid = document.querySelector('.attractions-grid');
     if (!grid) return;
@@ -189,26 +189,47 @@ function updateAttractionsGrid(attractions) {
         return;
     }
     
+    // 查看景點詳情函數
+    function viewAttractionDetail(attractionId) {
+        window.location.href = `/card/${attractionId}/`;
+    }
+
+
+    // 預設圖片映射
+    const defaultImages = {
+        '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
+        '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
+        '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
+        '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
+        '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop',
+        'default': 'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop'
+    };
+    
     attractions.forEach(attraction => {
         const card = document.createElement('div');
         card.className = 'attraction-card';
+        card.onclick = () => viewAttractionDetail(attraction.id);
+        
+        // 選擇預設圖片
+        let defaultImg = defaultImages['default'];
+        if (attraction.type && defaultImages[attraction.type]) {
+            defaultImg = defaultImages[attraction.type];
+        }
+        
         card.innerHTML = `
-            <img src="${attraction.image || '/static/images/default-attraction.jpg'}" 
+            <img src="${attraction.image || defaultImg}" 
                  alt="${attraction.name}" 
                  class="attraction-image"
-                 onerror="this.src='/static/images/default-attraction.jpg'">
+                 onerror="this.src='${defaultImg}'">
             <div class="attraction-info">
                 <div class="attraction-name">${attraction.name}</div>
                 <div class="attraction-location">${attraction.location}</div>
                 <div class="attraction-rating">${attraction.rating_stars} ${attraction.rating}</div>
-                <button class="add-to-plan-btn" data-attraction-id="${attraction.id}">加入行程</button>
+                <button class="view-detail-btn" onclick="event.stopPropagation(); viewAttractionDetail(${attraction.id})">查看詳情</button>
             </div>
         `;
         grid.appendChild(card);
     });
-    
-    // 重新綁定事件
-    bindAddToPlanEvents();
 }
 
 // 綁定加入行程按鈕事件

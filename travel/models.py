@@ -3,70 +3,68 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class UserProfile(models.Model):
-    TRAVEL_TYPE_CHOICES = [
-        ('culture', '文化體驗'),
-        ('nature', '自然風光'),
-        ('food', '美食探索'),
-        ('shopping', '購物娛樂'),
+    PERMISSION_CHOICES = [
+        ('user', '使用者'),
+        ('admin', '管理員'),
     ]
     
-    BUDGET_CHOICES = [
-        ('budget', '經濟型'),
-        ('mid', '中等型'),
-        ('luxury', '高端型'),
-    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='使用者')
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name='頭像')
+    email = models.EmailField(max_length=254, blank=True, verbose_name='電子郵件')
+    phone = models.CharField(max_length=20, blank=True, verbose_name='電話')
+    permission = models.CharField(max_length=20, choices=PERMISSION_CHOICES, default='user', verbose_name='權限')
     
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True)
-    travel_type = models.CharField(max_length=20, choices=TRAVEL_TYPE_CHOICES, default='culture')
-    budget_range = models.CharField(max_length=20, choices=BUDGET_CHOICES, default='mid')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        verbose_name = '使用者資料'
+        verbose_name_plural = '使用者資料'
     
     def __str__(self):
-        return f"{self.user.username} 的個人資料"
+        return f"{self.user.username} ({self.get_permission_display()})"
 
 class Region(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    name_en = models.CharField(max_length=50)
-    description = models.TextField(blank=True)
+    name = models.CharField(max_length=50, unique=True, verbose_name='地區名稱')
+    
+    class Meta:
+        verbose_name = '地區'
+        verbose_name_plural = '地區'
     
     def __str__(self):
         return self.name
 
 class AttractionType(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    icon = models.CharField(max_length=50, blank=True)
+    name = models.CharField(max_length=50, unique=True, verbose_name='類型名稱')
+    icon = models.CharField(max_length=50, blank=True, verbose_name='圖標')
+    
+    class Meta:
+        verbose_name = '景點類型'
+        verbose_name_plural = '景點類型'
     
     def __str__(self):
         return self.name
 
 class Attraction(models.Model):
-    name = models.CharField(max_length=200)
-    name_en = models.CharField(max_length=200, blank=True)
-    description = models.TextField()
-    region = models.ForeignKey(Region, on_delete=models.CASCADE)
-    attraction_type = models.ForeignKey(AttractionType, on_delete=models.CASCADE)
-    address = models.CharField(max_length=300)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    name = models.CharField(max_length=200, verbose_name='景點名稱')
+    description = models.TextField(verbose_name='描述')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, verbose_name='地區')
+    attraction_type = models.ForeignKey(AttractionType, on_delete=models.CASCADE, verbose_name='景點類型')
+    address = models.CharField(max_length=300, verbose_name='地址')
     rating = models.DecimalField(
         max_digits=3, 
         decimal_places=2, 
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        default=0
+        default=0,
+        verbose_name='評分'
     )
-    image = models.ImageField(upload_to='attractions/', blank=True, null=True)
-    website = models.URLField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-    opening_hours = models.TextField(blank=True)
-    ticket_price = models.CharField(max_length=100, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    image = models.ImageField(upload_to='attractions/', blank=True, null=True, verbose_name='圖片')
+    website = models.URLField(blank=True, verbose_name='官方網站')
+    phone = models.CharField(max_length=20, blank=True, verbose_name='電話')
+    opening_hours = models.TextField(blank=True, verbose_name='營業時間')
+    features = models.TextField(blank=True, verbose_name='特色')
     
     class Meta:
         ordering = ['-rating', 'name']
+        verbose_name = '景點'
+        verbose_name_plural = '景點'
     
     def __str__(self):
         return self.name
@@ -76,48 +74,61 @@ class Attraction(models.Model):
         return '★' * int(self.rating) + '☆' * (5 - int(self.rating))
 
 class Trip(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    attractions = models.ManyToManyField(Attraction, through='TripAttraction')
-    is_public = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='使用者')
+    trip_name = models.CharField(max_length=200, verbose_name='旅程名稱')
+    description = models.TextField(blank=True, verbose_name='描述')
+    start_time = models.DateTimeField(verbose_name='開始時間')
+    end_time = models.DateTimeField(verbose_name='結束時間')
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-start_time']
+        verbose_name = '旅程'
+        verbose_name_plural = '旅程'
     
     def __str__(self):
-        return f"{self.user.username} - {self.title}"
+        return f"{self.user.username} - {self.trip_name}"
     
     @property
     def duration_days(self):
-        return (self.end_date - self.start_date).days + 1
+        return (self.end_time.date() - self.start_time.date()).days + 1
 
-class TripAttraction(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE)
-    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE)
-    day_number = models.PositiveIntegerField()
-    order = models.PositiveIntegerField()
-    visit_time = models.TimeField(blank=True, null=True)
-    notes = models.TextField(blank=True)
+class Itinerary(models.Model):
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, verbose_name='旅程')
+    itinerary_name = models.CharField(max_length=200, verbose_name='行程名稱')
+    date = models.DateField(verbose_name='日期')
+    attractions = models.ManyToManyField(Attraction, through='ItineraryAttraction', verbose_name='景點')
+    start_time = models.TimeField(verbose_name='開始時間')
+    end_time = models.TimeField(verbose_name='結束時間')
     
     class Meta:
-        ordering = ['day_number', 'order']
-        unique_together = ['trip', 'attraction']
+        ordering = ['date', 'start_time']
+        verbose_name = '行程'
+        verbose_name_plural = '行程'
     
     def __str__(self):
-        return f"{self.trip.title} - Day {self.day_number}: {self.attraction.name}"
+        return f"{self.trip.trip_name} - {self.itinerary_name} ({self.date})"
 
-class FavoriteTrip(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+class ItineraryAttraction(models.Model):
+    itinerary = models.ForeignKey(Itinerary, on_delete=models.CASCADE, verbose_name='行程')
+    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE, verbose_name='景點')
+    notes = models.TextField(blank=True, verbose_name='備註')
     
     class Meta:
-        unique_together = ['user', 'trip']
+        verbose_name = '行程景點'
+        verbose_name_plural = '行程景點'
+        unique_together = ['itinerary', 'attraction']
     
     def __str__(self):
-        return f"{self.user.username} 喜歡 {self.trip.title}"
+        return f"{self.itinerary.itinerary_name} - {self.attraction.name}"
+
+class FavoriteAttraction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='使用者')
+    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE, verbose_name='景點')
+    
+    class Meta:
+        unique_together = ['user', 'attraction']
+        verbose_name = '收藏景點'
+        verbose_name_plural = '收藏景點'
+    
+    def __str__(self):
+        return f"{self.user.username} 收藏 {self.attraction.name}"

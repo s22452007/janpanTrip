@@ -435,3 +435,105 @@ window.addEventListener('error', function(e) {
 window.addEventListener('unhandledrejection', function(e) {
     console.error('未處理的 Promise 拒絕:', e.reason);
 });
+
+
+function editTrip(tripId) {
+    window.location.href = `/trip/edit/${tripId}/`;
+}
+
+function deleteTrip(tripId) {
+    if (confirm('確定要刪除這個行程嗎？此操作無法復原。')) {
+        fetch(`/trip/delete/${tripId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || '刪除失敗，請稍後再試');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('發生錯誤，請稍後再試');
+        });
+    }
+}
+
+function editTrip(tripId) {
+    window.location.href = `/trip/edit/${tripId}/`;
+}
+
+function deleteTrip(tripId) {
+    if (confirm('確定要刪除這個行程嗎？此操作無法復原。')) {
+        // 獲取 CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') || 
+                         document.querySelector('meta[name=csrf-token]');
+        
+        if (!csrfToken) {
+            alert('安全驗證失敗，請刷新頁面後重試');
+            return;
+        }
+        
+        fetch(`/trip/delete/${tripId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrfToken.value || csrfToken.getAttribute('content'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 顯示成功訊息
+                showMessage(data.message, 'success');
+                // 移除該行程卡片（動態更新）
+                const tripCard = document.querySelector(`[onclick="deleteTrip(${tripId})"]`).closest('.trip-card');
+                if (tripCard) {
+                    tripCard.style.transition = 'all 0.3s ease';
+                    tripCard.style.opacity = '0';
+                    tripCard.style.transform = 'translateX(-100%)';
+                    setTimeout(() => {
+                        tripCard.remove();
+                        // 檢查是否沒有行程了
+                        if (document.querySelectorAll('.trip-card').length === 0) {
+                            location.reload();
+                        }
+                    }, 300);
+                }
+            } else {
+                alert(data.message || '刪除失敗，請稍後再試');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('發生錯誤，請稍後再試');
+        });
+    }
+}
+
+// 顯示訊息的輔助函數
+function showMessage(message, type = 'info') {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type}`;
+    messageDiv.innerHTML = `
+        ${message}
+        <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    const container = document.querySelector('.messages') || createMessageContainer();
+    container.appendChild(messageDiv);
+    
+    // 3秒後自動移除
+    setTimeout(() => {
+        if (messageDiv.parentElement) {
+            messageDiv.remove();
+        }
+    }, 3000);
+}

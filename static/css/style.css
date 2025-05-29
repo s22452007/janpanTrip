@@ -904,16 +904,19 @@ body {
 /* 行程管理 */
 .my-itinerary {
     background: #f8f9fa;
-    padding: 20px;
-    border-radius: 12px;
+    padding: 25px;
+    border-radius: 15px;
     margin-top: 30px;
 }
 
 .itinerary-title {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
     color: #333;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #ff69b4;
+    display: inline-block;
 }
 
 .itinerary-item {
@@ -1190,5 +1193,241 @@ body {
     .nav-tab {
         padding: 0.8rem 1rem;
         font-size: 0.9rem;
+    }
+}
+
+/* 簡化的行程項目樣式 */
+.trip-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ff69b4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.trip-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.trip-info {
+    flex: 1;
+}
+
+.trip-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.trip-dates {
+    color: #666;
+    font-size: 14px;
+}
+
+.trip-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .trip-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .trip-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+.create-trip-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #ff69b4, #ff8fa3);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+}
+
+.create-trip-btn:hover {
+    background: linear-gradient(135deg, #e55aa0, #ff7a95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-icon {
+    font-size: 20px;
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+/* 新的行程卡片樣式 */
+.trip-card {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #ff69b4;
+    transition: all 0.3s ease;
+}
+
+.trip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.trip-card .trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+}
+
+.trip-card .trip-info {
+    flex: 1;
+}
+
+.trip-card .trip-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ff69b4;
+    margin-bottom: 8px;
+}
+
+.trip-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.trip-card .trip-dates {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.trip-stats {
+    color: #888;
+    font-size: 13px;
+}
+
+.attraction-count {
+    color: #ff69b4;
+    font-weight: 600;
+}
+
+/* 新的動作按鈕樣式 */
+.trip-card .trip-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 60px;
+}
+
+.edit-btn {
+    background: #28a745;
+    color: white;
+}
+
+.edit-btn:hover {
+    background: #218838;
+    transform: scale(1.05);
+}
+
+.delete-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: #c82333;
+    transform: scale(1.05);
+}
+
+/* 無行程狀態樣式 */
+.no-trips {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+    background: transparent;
+}
+
+.no-trips-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.no-trips p {
+    margin: 8px 0;
+    font-size: 16px;
+}
+
+.no-trips-subtitle {
+    font-size: 14px !important;
+    color: #aaa;
+}
+
+/* 響應式設計更新 */
+@media (max-width: 768px) {
+    .trip-card .trip-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .trip-card .trip-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .action-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    
+    .my-itinerary {
+        padding: 20px 15px;
     }
 }

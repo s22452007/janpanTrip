@@ -80,41 +80,36 @@
 
             <div class="my-itinerary">
                 <div class="itinerary-title">我的行程</div>
+                
                 {% for trip in user_trips %}
-                <div class="itinerary-item">
-                    <div class="itinerary-date">{{ trip.title }}</div>
-                    <div class="itinerary-details">
-                        <div>
-                            <div class="trip-dates">{{ trip.start_date }} - {{ trip.end_date }}</div>
-                            <div class="trip-attractions">已規劃景點: {{ trip.attractions.count }}</div>
+                <div class="trip-card">
+                    <div class="trip-header">
+                        <div class="trip-info">
+                            <div class="trip-name">{{ trip.trip_name }}</div>
+                            <div class="trip-meta">
+                                <div class="trip-dates">{{ trip.start_time|date:"Y/m/d" }} - {{ trip.end_time|date:"Y/m/d" }}</div>
+                                <div class="trip-stats">已規劃景點: <span class="attraction-count">{{ trip.total_attractions|default:0 }}</span></div>
+                            </div>
                         </div>
-                        <div class="itinerary-actions">
-                            <button class="btn-small btn-edit" onclick="editTrip({{ trip.id }})">編輯</button>
-                            <button class="btn-small btn-delete" onclick="deleteTrip({{ trip.id }})">刪除</button>
+                        <div class="trip-actions">
+                            <button class="action-btn edit-btn" onclick="editTrip({{ trip.id }})">編輯</button>
+                            <button class="action-btn delete-btn" onclick="deleteTrip({{ trip.id }})">刪除</button>
                         </div>
                     </div>
                 </div>
                 {% empty %}
                 <div class="no-trips">
-                    <p>你還沒有創建任何行程，開始添加景點來創建你的第一個行程吧！</p>
+                    <div class="no-trips-icon">✈️</div>
+                    <p>你還沒有創建任何行程</p>
+                    <p class="no-trips-subtitle">點擊下方按鈕建立你的第一個行程！</p>
                 </div>
                 {% endfor %}
                 
-                <div style="margin-top: 20px;">
-                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">第1天 09:00-14:00</div>
-                    <div style="color: #333; margin-bottom: 5px;">東京晴空塔</div>
-                    <div style="color: #666; font-size: 12px; margin-bottom: 15px;">從淺草站搭乘都營淺草線至押上站</div>
-
-                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">14:00-18:00</div>
-                    <div style="color: #333; margin-bottom: 5px;">淺草寺</div>
-                    <div style="color: #666; font-size: 12px; margin-bottom: 15px;">淺草站周邊徒步5分鐘</div>
-
-                    <div style="color: #ff69b4; font-size: 14px; margin-bottom: 10px;">18:00-21:00</div>
-                    <div style="color: #333; margin-bottom: 5px;">晚餐</div>
-                    <div style="color: #666; font-size: 12px;">在淺草老街享用天婦羅料理</div>
-                </div>
-
-                <button style="width: 100%; padding: 12px; background: #ff69b4; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer;">配置規劃時程表</button>
+                <!-- 建立新行程按鈕 -->
+                <a href="{% url 'travel:create_trip' %}" class="create-trip-btn">
+                    <span class="btn-icon">+</span>
+                    建立行程
+                </a>
             </div>
         </div>
 

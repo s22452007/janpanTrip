@@ -1,16 +1,16 @@
 from django.contrib import admin
-from .models import UserProfile, Region, AttractionType, Attraction, Trip, TripAttraction, FavoriteTrip
+from .models import UserProfile, Region, AttractionType, Attraction, Trip, Itinerary, ItineraryAttraction, FavoriteAttraction
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'phone', 'travel_type', 'budget_range', 'created_at']
-    list_filter = ['travel_type', 'budget_range', 'created_at']
-    search_fields = ['user__username', 'user__email', 'phone']
+    list_display = ['user', 'email', 'phone', 'permission']
+    list_filter = ['permission']
+    search_fields = ['user__username', 'user__email', 'email', 'phone']
 
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'name_en']
-    search_fields = ['name', 'name_en']
+    list_display = ['name']
+    search_fields = ['name']
 
 @admin.register(AttractionType)
 class AttractionTypeAdmin(admin.ModelAdmin):
@@ -19,50 +19,46 @@ class AttractionTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Attraction)
 class AttractionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'region', 'attraction_type', 'rating', 'created_at']
-    list_filter = ['region', 'attraction_type', 'rating', 'created_at']
-    search_fields = ['name', 'name_en', 'address']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ['name', 'region', 'attraction_type', 'rating']
+    list_filter = ['region', 'attraction_type', 'rating']
+    search_fields = ['name', 'address']
 
-# TripAttraction 的內聯管理
-class TripAttractionInline(admin.TabularInline):
-    model = TripAttraction
+# ItineraryAttraction 的內聯管理
+class ItineraryAttractionInline(admin.TabularInline):
+    model = ItineraryAttraction
     extra = 1
-    fields = ['attraction', 'day_number', 'order', 'visit_time', 'notes']
+    fields = ['attraction', 'notes']
+
+@admin.register(Itinerary)
+class ItineraryAdmin(admin.ModelAdmin):
+    list_display = ['itinerary_name', 'trip', 'date', 'start_time', 'end_time']
+    list_filter = ['date', 'trip__user']
+    search_fields = ['itinerary_name', 'trip__trip_name']
+    inlines = [ItineraryAttractionInline]
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
-    list_display = ['title', 'user', 'start_date', 'end_date', 'is_public', 'created_at']
-    list_filter = ['is_public', 'start_date', 'created_at']
-    search_fields = ['title', 'user__username']
-    readonly_fields = ['created_at', 'updated_at']
-    inlines = [TripAttractionInline]  # 使用內聯而不是 filter_horizontal
+    list_display = ['trip_name', 'user', 'start_time', 'end_time']
+    list_filter = ['start_time', 'user']
+    search_fields = ['trip_name', 'user__username']
     
     fieldsets = (
         ('基本資訊', {
-            'fields': ('user', 'title', 'description')
+            'fields': ('user', 'trip_name', 'description')
         }),
-        ('日期設定', {
-            'fields': ('start_date', 'end_date')
-        }),
-        ('其他設定', {
-            'fields': ('is_public',)
-        }),
-        ('系統資訊', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
+        ('時間設定', {
+            'fields': ('start_time', 'end_time')
         }),
     )
 
-@admin.register(TripAttraction)
-class TripAttractionAdmin(admin.ModelAdmin):
-    list_display = ['trip', 'attraction', 'day_number', 'order', 'visit_time']
-    list_filter = ['day_number', 'trip__start_date']
-    search_fields = ['trip__title', 'attraction__name']
-    list_editable = ['day_number', 'order', 'visit_time']
+@admin.register(ItineraryAttraction)
+class ItineraryAttractionAdmin(admin.ModelAdmin):
+    list_display = ['itinerary', 'attraction', 'notes']
+    list_filter = ['itinerary__trip__user', 'attraction__region']
+    search_fields = ['itinerary__itinerary_name', 'attraction__name']
 
-@admin.register(FavoriteTrip)
-class FavoriteTripAdmin(admin.ModelAdmin):
-    list_display = ['user', 'trip', 'created_at']
-    list_filter = ['created_at']
-    search_fields = ['user__username', 'trip__title']
+@admin.register(FavoriteAttraction)
+class FavoriteAttractionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'attraction']
+    list_filter = ['attraction__region', 'attraction__attraction_type']
+    search_fields = ['user__username', 'attraction__name']

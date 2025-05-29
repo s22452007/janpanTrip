@@ -69,6 +69,7 @@
                         <button class="view-detail-btn" onclick="event.stopPropagation(); viewAttractionDetail({{ attraction.id }})">查看詳情</button>
                     </div>
                 </div>
+                </a>
                 {% empty %}
                 <div class="no-attractions">
                     <p>目前沒有景點資料，請先添加一些景點。</p>
@@ -101,7 +102,6 @@
                     <div class="no-trips-icon">✈️</div>
                     <p>你還沒有創建任何行程</p>
                     <p class="no-trips-subtitle">點擊下方按鈕建立你的第一個行程！</p>
-                </a>
                 </div>
                 {% endfor %}
                 

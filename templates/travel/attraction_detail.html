@@ -1,0 +1,874 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ attraction.name }} - 景點詳情{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <!-- 返回按鈕 -->
+    <div class="detail-header">
+        <a href="javascript:history.back()" class="back-btn">← 返回景點列表</a>
+        <div class="action-buttons">
+            <button class="favorite-btn" onclick="toggleFavorite({{ attraction.id }})">
+                <span class="heart-icon">♡</span>
+            </button>
+            <button class="share-btn" onclick="shareAttraction()">
+                <span class="share-icon">⌗</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 景點圖片輪播 -->
+    <div class="image-gallery">
+        <div class="main-image">
+            {% if attraction.image %}
+                <img src="{{ attraction.image.url }}" alt="{{ attraction.name }}" id="mainImage">
+            {% else %}
+                {% if attraction.attraction_type.name == '寺廟神社' %}
+                    <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
+                {% elif attraction.attraction_type.name == '現代景點' %}
+                    <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
+                {% elif attraction.attraction_type.name == '自然風光' %}
+                    <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
+                {% elif attraction.attraction_type.name == '美食' %}
+                    <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
+                {% else %}
+                    <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
+                {% endif %}
+            {% endif %}
+            
+            <!-- 圖片輪播指示點 -->
+            <div class="image-dots">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 景點基本資訊 -->
+    <div class="attraction-header">
+        <h1 class="attraction-title">{{ attraction.name }}</h1>
+        <div class="attraction-badges">
+            <span class="badge primary">{{ attraction.attraction_type.name }}</span>
+            <span class="badge secondary">{{ attraction.region.name }}</span>
+        </div>
+    </div>
+
+    <!-- 主要內容區域 -->
+    <div class="content-grid">
+        <!-- 左側：景點資訊 -->
+        <div class="info-section">
+            <!-- 景點介紹 -->
+            <div class="info-card">
+                <h3 class="section-title">景點介紹</h3>
+                <div class="section-content">
+                    <p>{{ attraction.description|default:"這個美麗的景點等待您的探索..." }}</p>
+                </div>
+            </div>
+
+            <!-- 景點特色 -->
+            {% if attraction.features %}
+            <div class="info-card">
+                <h3 class="section-title">景點特色</h3>
+                <div class="features-list">
+                    <div class="feature-item">
+                        <span class="feature-icon">●</span>
+                        <span class="feature-text">{{ attraction.features }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 聯絡資訊 -->
+            <div class="info-card">
+                <h3 class="section-title">聯絡資訊</h3>
+                <div class="contact-info">
+                    {% if attraction.opening_hours %}
+                    <div class="contact-item">
+                        <div class="contact-icon">🕒</div>
+                        <div class="contact-details">
+                            <div class="contact-label">營業時間</div>
+                            <div class="contact-value">{{ attraction.opening_hours }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if attraction.phone %}
+                    <div class="contact-item">
+                        <div class="contact-icon">📞</div>
+                        <div class="contact-details">
+                            <div class="contact-label">電話</div>
+                            <div class="contact-value">
+                                <a href="tel:{{ attraction.phone }}">{{ attraction.phone }}</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if attraction.website %}
+                    <div class="contact-item">
+                        <div class="contact-icon">🌐</div>
+                        <div class="contact-details">
+                            <div class="contact-label">官方網站</div>
+                            <div class="contact-value">
+                                <a href="{{ attraction.website }}" target="_blank">查看官網</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="contact-item">
+                        <div class="contact-icon">📍</div>
+                        <div class="contact-details">
+                            <div class="contact-label">地址</div>
+                            <div class="contact-value">{{ attraction.address }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：評分統計和加入行程 -->
+        <div class="action-section">
+            <!-- 景點統計 -->
+            <div class="stats-card">
+                <h3 class="section-title">景點統計</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">遊客評分</div>
+                        <div class="stat-value rating">
+                            <span class="stars">{{ attraction.rating_stars }}</span>
+                            <span class="rating-number">{{ attraction.rating }}/5.0</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">評論數量</div>
+                        <div class="stat-value">15,420</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">景點類型</div>
+                        <div class="stat-value">{{ attraction.attraction_type.name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加入行程卡片 -->
+            <div class="add-to-trip-card">
+                <h3 class="section-title">加入行程</h3>
+                
+                <!-- 選擇行程的下拉選單 -->
+                <div class="trip-selector">
+                    <label for="trip-select">選擇行程：</label>
+                    <select id="trip-select" class="trip-select">
+                        <option value="">請選擇行程...</option>
+                        {% for trip in user_trips %}
+                            <option value="{{ trip.id }}">{{ trip.trip_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="create-new-trip-btn" onclick="window.location.href='{% url 'travel:create_trip' %}'">
+                        + 建立新行程
+                    </button>
+                </div>
+
+                <!-- 選擇日期 -->
+                <div class="date-selector" id="date-selector" style="display: none;">
+                    <label for="date-select">選擇日期：</label>
+                    <select id="date-select" class="date-select">
+                        <option value="">請先選擇行程</option>
+                    </select>
+                </div>
+
+                <!-- 加入行程按鈕 -->
+                <button class="add-to-trip-btn" id="add-to-trip-btn" onclick="addToTrip()" disabled>
+                    加入行程
+                </button>
+
+                <!-- 用戶偏好設定 -->
+                <div class="preference-note">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="remember-trip" checked>
+                        <span class="checkmark"></span>
+                        <span class="checkbox-text">記住我的選擇，下次自動使用此行程</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.back-btn {
+    color: #ff69b4;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 20px;
+    border: 2px solid #ff69b4;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #ff69b4;
+    color: white;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.favorite-btn, .share-btn {
+    width: 44px;
+    height: 44px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.favorite-btn:hover {
+    border-color: #ff69b4;
+    color: #ff69b4;
+}
+
+.share-btn:hover {
+    border-color: #ff69b4;
+    color: #ff69b4;
+}
+
+/* 圖片輪播 */
+.image-gallery {
+    margin-bottom: 30px;
+}
+
+.main-image {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-dots {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dot.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+/* 景點標題區 */
+.attraction-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.attraction-title {
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.attraction-badges {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.badge.primary {
+    background: #ff69b4;
+    color: white;
+}
+
+.badge.secondary {
+    background: #f8f9fa;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+/* 內容網格 */
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+}
+
+/* 資訊卡片 */
+.info-card, .stats-card, .add-to-trip-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: #ff69b4;
+    border-radius: 2px;
+}
+
+.section-content p {
+    line-height: 1.6;
+    color: #666;
+    margin: 0;
+}
+
+/* 特色列表 */
+.features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.feature-icon {
+    color: #ff69b4;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.feature-text {
+    flex: 1;
+    line-height: 1.5;
+    color: #666;
+}
+
+/* 聯絡資訊 */
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.contact-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.contact-details {
+    flex: 1;
+}
+
+.contact-label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.contact-value {
+    color: #666;
+    line-height: 1.4;
+}
+
+.contact-value a {
+    color: #ff69b4;
+    text-decoration: none;
+}
+
+.contact-value a:hover {
+    text-decoration: underline;
+}
+
+/* 統計區域 */
+.stats-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #666;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #333;
+}
+
+.stat-value.rating {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.stars {
+    color: #ffa500;
+    font-size: 16px;
+}
+
+.rating-number {
+    font-size: 14px;
+    color: #ff69b4;
+}
+
+/* 加入行程區域 */
+.trip-selector, .date-selector {
+    margin-bottom: 20px;
+}
+
+.trip-selector label, .date-selector label {
+    display: block;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.trip-select, .date-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    margin-bottom: 10px;
+}
+
+.trip-select:focus, .date-select:focus {
+    outline: none;
+    border-color: #ff69b4;
+}
+
+.create-new-trip-btn {
+    width: 100%;
+    padding: 10px;
+    background: #f8f9fa;
+    border: 2px dashed #e0e0e0;
+    border-radius: 8px;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.create-new-trip-btn:hover {
+    border-color: #ff69b4;
+    color: #ff69b4;
+    background: #fef7f7;
+}
+
+.add-to-trip-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #ff69b4, #ff8fa3);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.add-to-trip-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e55aa0, #ff7a95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+}
+
+.add-to-trip-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 偏好設定 */
+.preference-note {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 15px;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+}
+
+.checkbox-container input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark {
+    background: #ff69b4;
+    border-color: #ff69b4;
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .attraction-title {
+        font-size: 24px;
+    }
+    
+    .main-image {
+        height: 250px;
+    }
+    
+    .detail-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+// 頁面載入時執行的函數
+document.addEventListener('DOMContentLoaded', function() {
+    // 檢查是否有記住的行程偏好
+    const rememberedTrip = localStorage.getItem('preferred_trip_id');
+    if (rememberedTrip) {
+        const tripSelect = document.getElementById('trip-select');
+        tripSelect.value = rememberedTrip;
+        loadTripDates(rememberedTrip);
+    }
+    
+    // 綁定行程選擇事件
+    document.getElementById('trip-select').addEventListener('change', function() {
+        const tripId = this.value;
+        if (tripId) {
+            loadTripDates(tripId);
+        } else {
+            hideDateSelector();
+        }
+    });
+});
+
+// 載入行程日期
+function loadTripDates(tripId) {
+    if (!tripId) return;
+    
+    fetch(`/get-trip-dates/${tripId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showDateSelector(data.dates);
+            } else {
+                console.error('載入日期失敗:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('載入日期請求失敗:', error);
+        });
+}
+
+// 顯示日期選擇器
+function showDateSelector(dates) {
+    const dateSelector = document.getElementById('date-selector');
+    const dateSelect = document.getElementById('date-select');
+    
+    // 清空選項
+    dateSelect.innerHTML = '<option value="">請選擇日期...</option>';
+    
+    // 添加日期選項
+    dates.forEach(date => {
+        const option = document.createElement('option');
+        option.value = date.value;
+        option.textContent = date.label;
+        dateSelect.appendChild(option);
+    });
+    
+    dateSelector.style.display = 'block';
+    
+    // 綁定日期選擇事件
+    dateSelect.addEventListener('change', function() {
+        const addBtn = document.getElementById('add-to-trip-btn');
+        addBtn.disabled = !this.value;
+    });
+}
+
+// 隱藏日期選擇器
+function hideDateSelector() {
+    const dateSelector = document.getElementById('date-selector');
+    const addBtn = document.getElementById('add-to-trip-btn');
+    
+    dateSelector.style.display = 'none';
+    addBtn.disabled = true;
+}
+
+// 加入行程函數
+function addToTrip() {
+    const tripId = document.getElementById('trip-select').value;
+    const selectedDate = document.getElementById('date-select').value;
+    const rememberChoice = document.getElementById('remember-trip').checked;
+    
+    if (!tripId || !selectedDate) {
+        alert('請選擇行程和日期');
+        return;
+    }
+    
+    // 禁用按鈕防止重複點擊
+    const addBtn = document.getElementById('add-to-trip-btn');
+    addBtn.disabled = true;
+    addBtn.textContent = '加入中...';
+    
+    // 發送請求
+    fetch('/add-attraction-to-trip/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            attraction_id: {{ attraction.id }},
+            trip_id: tripId,
+            selected_date: selectedDate,
+            remember_choice: rememberChoice
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 保存用戶偏好
+            if (rememberChoice) {
+                localStorage.setItem('preferred_trip_id', tripId);
+            }
+            
+            // 顯示成功訊息
+            showMessage(data.message, 'success');
+            
+            // 更新按鈕狀態
+            addBtn.style.background = '#28a745';
+            addBtn.textContent = '已加入';
+            
+            // 2秒後恢復按鈕
+            setTimeout(() => {
+                addBtn.disabled = false;
+                addBtn.style.background = '';
+                addBtn.textContent = '加入行程';
+            }, 2000);
+            
+        } else {
+            alert(data.message || '加入行程失敗');
+            addBtn.disabled = false;
+            addBtn.textContent = '加入行程';
+        }
+    })
+    .catch(error => {
+        console.error('加入行程請求失敗:', error);
+        alert('加入行程失敗，請稍後再試');
+        addBtn.disabled = false;
+        addBtn.textContent = '加入行程';
+    });
+}
+
+// 切換收藏狀態
+function toggleFavorite(attractionId) {
+    const favoriteBtn = document.querySelector('.favorite-btn');
+    const heartIcon = favoriteBtn.querySelector('.heart-icon');
+    
+    fetch('/toggle-favorite/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            attraction_id: attractionId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorite) {
+                heartIcon.textContent = '♥';
+                heartIcon.style.color = '#ff69b4';
+                showMessage('已加入收藏', 'success');
+            } else {
+                heartIcon.textContent = '♡';
+                heartIcon.style.color = '';
+                showMessage('已取消收藏', 'info');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('收藏操作失敗:', error);
+    });
+}
+
+// 分享景點
+function shareAttraction() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ attraction.name }}',
+            text: '{{ attraction.description|truncatechars:100 }}',
+            url: window.location.href,
+        });
+    } else {
+        // 備用方案：複製連結到剪貼板
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showMessage('連結已複製到剪貼板', 'success');
+        });
+    }
+}
+
+// 顯示訊息
+function showMessage(message, type = 'info') {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type}`;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease;
+    `;
+    
+    switch(type) {
+        case 'success':
+            messageDiv.style.background = '#28a745';
+            break;
+        case 'error':
+            messageDiv.style.background = '#dc3545';
+            break;
+        default:
+            messageDiv.style.background = '#17a2b8';
+    }
+    
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (messageDiv.parentElement) {
+                messageDiv.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// CSS 動畫
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

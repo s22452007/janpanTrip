@@ -35,4 +35,9 @@ urlpatterns = [
     path('add-to-favorites/<int:attraction_id>/', views.add_to_favorites_view, name='add_to_favorites'),
     path('remove-from-favorites/<int:attraction_id>/', views.remove_from_favorites_view, name='remove_from_favorites'),
     path('get-user-favorites/', views.get_user_favorites_view, name='get_user_favorites'),
+
+    path('attraction/<int:attraction_id>/', views.attraction_detail, name='attraction_detail'),
+    path('get-trip-dates/<int:trip_id>/', views.get_trip_dates, name='get_trip_dates'),
+    path('add-attraction-to-trip/', views.add_attraction_to_trip, name='add_attraction_to_trip'),
+    path('toggle-favorite/', views.toggle_favorite, name='toggle_favorite'),
 ]

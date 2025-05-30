@@ -44,8 +44,7 @@
             <div class="attractions-grid">
                 <!-- 動態加載景點卡片 -->
                 {% for attraction in attractions %}
-                <a href="{% url 'travel:card' %}" style="text-decoration: none; color: inherit;">
-                    <div class="attraction-card">
+                                    <div class="attraction-card">
                         {% if attraction.image %}
                             <img src="{{ attraction.image.url }}" alt="{{ attraction.name }}" class="attraction-image">
                     {% else %}
@@ -239,41 +238,47 @@
 
 {% block extra_js %}
 <script>
-    function switchTab(tabName) {
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        event.target.classList.add('active');
-        document.getElementById(tabName).classList.add('active');
-    }
+function switchTab(tabName) {
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    event.target.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+}
 
-    // AJAX 加入行程功能
-    document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const attractionId = this.getAttribute('data-attraction-id');
-            fetch(`/add-to-plan/${attractionId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.style.background = '#28a745';
-                    this.textContent = '已加入';
-                    setTimeout(() => {
-                        this.style.background = '#ff69b4';
-                        this.textContent = '加入行程';
-                    }, 2000);
-                }
-            });
+// 新增的景點詳情查看函數
+function viewAttractionDetail(attractionId) {
+    // 跳轉到景點詳情頁面
+    window.location.href = `/attraction/${attractionId}/`;
+}
+
+// AJAX 加入行程功能（保持原有的功能）
+document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const attractionId = this.getAttribute('data-attraction-id');
+        fetch(`/add-to-plan/${attractionId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.style.background = '#28a745';
+                this.textContent = '已加入';
+                setTimeout(() => {
+                    this.style.background = '#ff69b4';
+                    this.textContent = '加入行程';
+                }, 2000);
+            }
         });
     });
+});
 </script>
 {% endblock %}

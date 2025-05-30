@@ -25,6 +25,12 @@ urlpatterns = [
     path('trip/delete/<int:trip_id>/', views.delete_trip_view, name='delete_trip'),
     path('remove-from-trip/<int:attraction_id>/', views.remove_from_trip_view, name='remove_from_trip'),
     
+    # 編輯行程相關 API
+    path('search-available-attractions/', views.search_available_attractions_view, name='search_available_attractions'),
+    path('add-to-itinerary/', views.add_to_itinerary_view, name='add_to_itinerary'),
+    path('change-attraction-day/', views.change_attraction_day_view, name='change_attraction_day'),
+    path('update-attraction-time/', views.update_attraction_time_view, name='update_attraction_time'),
+    
     # 收藏功能 API
     path('add-to-favorites/<int:attraction_id>/', views.add_to_favorites_view, name='add_to_favorites'),
     path('remove-from-favorites/<int:attraction_id>/', views.remove_from_favorites_view, name='remove_from_favorites'),

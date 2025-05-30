@@ -265,15 +265,37 @@ def edit_trip_view(request, trip_id):
     trip = get_object_or_404(Trip, id=trip_id, user=request.user)
     itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
     
+    # 獲取所有可用的景點（尚未加入此行程的）
+    added_attraction_ids = set()
+    for itinerary in itineraries:
+        for ia in itinerary.itineraryattraction_set.all():
+            added_attraction_ids.add(ia.attraction.id)
+    
+    available_attractions = Attraction.objects.exclude(id__in=added_attraction_ids)[:20]  # 限制數量
+    
+    # 獲取地區和景點類型用於篩選
+    regions = Region.objects.all()
+    attraction_types = AttractionType.objects.all()
+    
     # 計算統計資料
-    total_attractions = sum(itinerary.attractions.count() for itinerary in itineraries)
+    total_attractions = len(added_attraction_ids)
     trip_days = list(range(1, trip.duration_days + 1))
+    
+    # 整理每天的行程資料
+    day_itineraries = {}
+    for day in trip_days:
+        target_date = trip.start_time.date() + timedelta(days=day-1)
+        day_itineraries[day] = Itinerary.objects.filter(trip=trip, date=target_date).first()
     
     context = {
         'trip': trip,
         'itineraries': itineraries,
+        'available_attractions': available_attractions,
+        'regions': regions,
+        'attraction_types': attraction_types,
         'total_attractions': total_attractions,
         'trip_days': trip_days,
+        'day_itineraries': day_itineraries,
     }
     return render(request, 'travel/edit_trip.html', context)
 
@@ -462,3 +484,212 @@ def create_trip_view(request):
             return render(request, 'travel/create_trip.html')
     
     return render(request, 'travel/create_trip.html')
+
+@login_required
+def search_available_attractions_view(request):
+    """搜索可用的景點（用於編輯行程頁面）"""
+    search_query = request.GET.get('search', '').strip()
+    region = request.GET.get('region', '').strip()
+    attraction_type = request.GET.get('type', '').strip()
+    trip_id = request.GET.get('trip_id', '')
+    
+    print(f"搜索參數: search={search_query}, region={region}, type={attraction_type}, trip_id={trip_id}")  # 調試用
+    
+    try:
+        # 獲取已添加到行程中的景點ID
+        added_attraction_ids = set()
+        if trip_id:
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            itineraries = Itinerary.objects.filter(trip=trip)
+            for itinerary in itineraries:
+                for ia in itinerary.itineraryattraction_set.all():
+                    added_attraction_ids.add(ia.attraction.id)
+        
+        # 建立查詢
+        attractions = Attraction.objects.exclude(id__in=added_attraction_ids)
+        
+        if search_query:
+            attractions = attractions.filter(
+                Q(name__icontains=search_query) | 
+                Q(description__icontains=search_query) |
+                Q(address__icontains=search_query)
+            )
+        
+        if region:
+            attractions = attractions.filter(region__name=region)
+        
+        if attraction_type:
+            attractions = attractions.filter(attraction_type__name=attraction_type)
+        
+        # 預設圖片映射
+        default_images = {
+            '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
+            '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
+            '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
+            '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
+            '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop'
+        }
+        
+        attractions_data = []
+        for attr in attractions[:20]:  # 限制返回20個結果
+            attractions_data.append({
+                'id': attr.id,
+                'name': attr.name,
+                'location': f"{attr.region.name}・{attr.address}",
+                'rating': float(attr.rating),
+                'rating_stars': attr.rating_stars,
+                'image': attr.image.url if attr.image else default_images.get(
+                    attr.attraction_type.name, 
+                    'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop'
+                )
+            })
+        
+        print(f"找到 {len(attractions_data)} 個景點")  # 調試用
+        return JsonResponse({'success': True, 'attractions': attractions_data})
+        
+    except Exception as e:
+        print(f"搜索錯誤: {str(e)}")  # 調試用
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@login_required
+def add_to_itinerary_view(request):
+    """添加景點到行程"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            trip_id = data.get('trip_id')
+            attraction_id = data.get('attraction_id')
+            day = int(data.get('day', 1))
+            
+            print(f"加入行程: trip_id={trip_id}, attraction_id={attraction_id}, day={day}")  # 調試用
+            
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            attraction = get_object_or_404(Attraction, id=attraction_id)
+            
+            # 計算目標日期
+            target_date = trip.start_time.date() + timedelta(days=day-1)
+            
+            # 獲取或創建對應日期的 Itinerary
+            itinerary, created = Itinerary.objects.get_or_create(
+                trip=trip,
+                date=target_date,
+                defaults={
+                    'itinerary_name': f"{trip.trip_name} - 第{day}天",
+                    'start_time': time(9, 0),
+                    'end_time': time(18, 0)
+                }
+            )
+            
+            print(f"Itinerary: {itinerary.id}, created: {created}")  # 調試用
+            
+            # 檢查景點是否已經在這個 itinerary 中
+            if ItineraryAttraction.objects.filter(itinerary=itinerary, attraction=attraction).exists():
+                return JsonResponse({'success': False, 'message': '景點已在該天的行程中'})
+            
+            # 檢查景點是否已經在其他天的行程中
+            if ItineraryAttraction.objects.filter(
+                itinerary__trip=trip, 
+                attraction=attraction
+            ).exists():
+                return JsonResponse({'success': False, 'message': '景點已在其他天的行程中'})
+            
+            # 添加景點到行程
+            itinerary_attraction = ItineraryAttraction.objects.create(
+                itinerary=itinerary,
+                attraction=attraction,
+                notes=f'添加於 {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+            )
+            
+            print(f"ItineraryAttraction created: {itinerary_attraction.id}")  # 調試用
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'景點「{attraction.name}」已加入第{day}天行程'
+            })
+            
+        except Exception as e:
+            print(f"加入行程錯誤: {str(e)}")  # 調試用
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': '無效的請求'})
+
+@login_required
+def change_attraction_day_view(request):
+    """更改景點的天數"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            itinerary_attraction_id = data.get('itinerary_attraction_id')
+            new_day = int(data.get('new_day'))
+            
+            itinerary_attraction = get_object_or_404(
+                ItineraryAttraction, 
+                id=itinerary_attraction_id,
+                itinerary__trip__user=request.user
+            )
+            
+            trip = itinerary_attraction.itinerary.trip
+            target_date = trip.start_time.date() + timedelta(days=new_day-1)
+            
+            # 獲取或創建新的 Itinerary
+            new_itinerary, created = Itinerary.objects.get_or_create(
+                trip=trip,
+                date=target_date,
+                defaults={
+                    'itinerary_name': f"{trip.trip_name} - 第{new_day}天",
+                    'start_time': time(9, 0),
+                    'end_time': time(18, 0)
+                }
+            )
+            
+            # 檢查新的 itinerary 中是否已有這個景點
+            if ItineraryAttraction.objects.filter(
+                itinerary=new_itinerary, 
+                attraction=itinerary_attraction.attraction
+            ).exclude(id=itinerary_attraction.id).exists():
+                return JsonResponse({'success': False, 'message': f'景點已在第{new_day}天的行程中'})
+            
+            # 更新景點的 itinerary
+            itinerary_attraction.itinerary = new_itinerary
+            itinerary_attraction.save()
+            
+            return JsonResponse({'success': True, 'message': f'景點已移至第{new_day}天'})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': '無效的請求'})
+
+@login_required
+def update_attraction_time_view(request):
+    """更新景點時間"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            itinerary_attraction_id = data.get('itinerary_attraction_id')
+            new_time = data.get('new_time')
+            
+            itinerary_attraction = get_object_or_404(
+                ItineraryAttraction, 
+                id=itinerary_attraction_id,
+                itinerary__trip__user=request.user
+            )
+            
+            # 在 notes 中記錄時間
+            current_notes = itinerary_attraction.notes or ''
+            time_note = f"\n參觀時間: {new_time}"
+            
+            # 移除舊的時間記錄（如果有）
+            lines = current_notes.split('\n')
+            filtered_lines = [line for line in lines if not line.startswith('參觀時間:')]
+            new_notes = '\n'.join(filtered_lines) + time_note
+            
+            itinerary_attraction.notes = new_notes.strip()
+            itinerary_attraction.save()
+            
+            return JsonResponse({'success': True, 'message': '時間已更新'})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': '無效的請求'})

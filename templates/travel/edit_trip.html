@@ -59,7 +59,6 @@
                     <div class="attraction-info">
                         <div class="attraction-name">{{ attraction.name }}</div>
                         <div class="attraction-location">{{ attraction.region.name }}・{{ attraction.address }}</div>
-                        <div class="attraction-rating">{{ attraction.rating_stars }} {{ attraction.rating }}</div>
                     </div>
                     <div class="attraction-controls">
                         <select class="day-select" data-attraction-id="{{ attraction.id }}">
@@ -114,7 +113,8 @@
                     <div class="day-attractions" id="day-{{ day }}-attractions">
                         {% with day_itinerary=day_itineraries|get_item:day %}
                             {% if day_itinerary %}
-                                {% for itinerary_attraction in day_itinerary.itineraryattraction_set.all %}
+                                <!-- 使用排序後的景點列表 -->
+                                {% for itinerary_attraction in day_itinerary.sorted_attractions %}
                                 <div class="itinerary-item" data-attraction-id="{{ itinerary_attraction.id }}">
                                     <div class="item-image">
                                         {% if itinerary_attraction.attraction.image %}
@@ -140,7 +140,11 @@
                                                 {% endfor %}
                                             </select>
                                             <span>⏰</span>
-                                            <input type="time" class="time-input" value="09:00" onchange="updateAttractionTime({{ itinerary_attraction.id }}, this.value)">
+                                            <!-- 顯示實際儲存的時間 -->
+                                            <input type="time" 
+                                                class="time-input" 
+                                                value="{% if itinerary_attraction.visit_time %}{{ itinerary_attraction.visit_time|time:'H:i' }}{% else %}09:00{% endif %}"
+                                                onchange="updateAttractionTime({{ itinerary_attraction.id }}, this.value)">
                                         </div>
                                     </div>
                                     <div class="item-actions">
@@ -153,7 +157,7 @@
                         
                         <!-- 空狀態 -->
                         {% with day_itinerary=day_itineraries|get_item:day %}
-                            {% if not day_itinerary or day_itinerary.itineraryattraction_set.count == 0 %}
+                            {% if not day_itinerary or day_itinerary.sorted_attractions.count == 0 %}
                             <div class="empty-day">
                                 <p>這天還沒有安排景點</p>
                                 <p class="empty-hint">從左側選擇景點並設定為第{{ day }}天</p>

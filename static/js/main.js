@@ -558,3 +558,166 @@ function showMessage(message, type = 'info') {
         }
     }, 3000);
 }
+
+// 更新景點時間（修改版 - 支援即時排序）
+function updateAttractionTime(itineraryAttractionId, newTime) {
+    fetch('/update-attraction-time/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            itinerary_attraction_id: itineraryAttractionId,
+            new_time: newTime
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('時間已更新', 'success');
+            
+            // 如果返回了排序資料，立即重新排序
+            if (data.sorted_attractions) {
+                reorderAttractions(data.sorted_attractions, data.itinerary_date);
+            }
+        } else {
+            alert(data.message || '時間更新失敗');
+        }
+    })
+    .catch(error => {
+        console.error('更新時間失敗:', error);
+        alert('時間更新失敗，請稍後再試');
+    });
+}
+
+// 重新排序景點函數
+function reorderAttractions(sortedAttractions, itineraryDate) {
+    // 根據日期找到對應的天數
+    const tripStartDate = new Date('{{ trip.start_time|date:"Y-m-d" }}');
+    const currentDate = new Date(itineraryDate);
+    const dayDiff = Math.floor((currentDate - tripStartDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const dayContainer = document.getElementById(`day-${dayDiff}-attractions`);
+    if (!dayContainer) return;
+    
+    // 保存空狀態元素
+    const emptyDay = dayContainer.querySelector('.empty-day');
+    
+    // 清空容器
+    dayContainer.innerHTML = '';
+    
+    if (sortedAttractions.length === 0) {
+        // 如果沒有景點，顯示空狀態
+        if (emptyDay) {
+            dayContainer.appendChild(emptyDay);
+        } else {
+            dayContainer.innerHTML = `
+                <div class="empty-day">
+                    <p>這天還沒有安排景點</p>
+                    <p class="empty-hint">從左側選擇景點並設定為第${dayDiff}天</p>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    // 重新生成排序後的景點列表
+    sortedAttractions.forEach(attraction => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'itinerary-item';
+        itemDiv.setAttribute('data-attraction-id', attraction.id);
+        
+        // 選擇合適的預設圖片
+        let imageUrl = attraction.image_url;
+        if (!imageUrl) {
+            const defaultImages = {
+                '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=60&h=60&fit=crop',
+                '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=60&h=60&fit=crop',
+                '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=60&h=60&fit=crop',
+                '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=60&h=60&fit=crop',
+                '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=60&h=60&fit=crop'
+            };
+            imageUrl = defaultImages[attraction.attraction_type] || 'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=60&h=60&fit=crop';
+        }
+        
+        itemDiv.innerHTML = `
+            <div class="item-image">
+                <img src="${imageUrl}" alt="${attraction.name}">
+            </div>
+            <div class="item-info">
+                <div class="item-name">${attraction.name}</div>
+                <div class="item-location">${attraction.address}</div>
+                <div class="item-controls">
+                    <span>天數：</span>
+                    <select class="day-change-select" onchange="changeDayForAttraction(${attraction.id}, this.value)">
+                        {% for d in trip_days %}
+                            <option value="{{ d }}" ${d == dayDiff ? 'selected' : ''}>第{{ d }}天</option>
+                        {% endfor %}
+                    </select>
+                    <span>⏰</span>
+                    <input type="time" 
+                           class="time-input" 
+                           value="${attraction.visit_time}" 
+                           onchange="updateAttractionTime(${attraction.id}, this.value)">
+                </div>
+            </div>
+            <div class="item-actions">
+                <button class="remove-btn" onclick="removeFromItinerary(${attraction.id})">🗑️</button>
+            </div>
+        `;
+        
+        dayContainer.appendChild(itemDiv);
+    });
+    
+    // 添加淡入動畫效果
+    dayContainer.style.opacity = '0';
+    setTimeout(() => {
+        dayContainer.style.transition = 'opacity 0.3s ease';
+        dayContainer.style.opacity = '1';
+    }, 50);
+}
+
+// 修改 addToItinerary 函數，加入後也要重新排序
+function addToItinerary(attractionId) {
+    const daySelect = document.querySelector(`[data-attraction-id="${attractionId}"]`);
+    const selectedDay = daySelect.value;
+    
+    // 禁用按鈕防止重複點擊
+    const addBtn = daySelect.parentElement.querySelector('.add-btn');
+    addBtn.disabled = true;
+    addBtn.textContent = '加入中...';
+    
+    fetch('/add-to-itinerary/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            trip_id: {{ trip.id }},
+            attraction_id: attractionId,
+            day: selectedDay
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            // 重新載入頁面以顯示更新和正確排序
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert(data.message || '加入行程失敗');
+            addBtn.disabled = false;
+            addBtn.textContent = '+ 加入行程';
+        }
+    })
+    .catch(error => {
+        console.error('加入行程請求失敗:', error);
+        alert('加入行程失敗，請稍後再試');
+        addBtn.disabled = false;
+        addBtn.textContent = '+ 加入行程';
+    });
+}

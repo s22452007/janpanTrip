@@ -21,8 +21,13 @@ urlpatterns = [
     path('search-attractions/', views.search_attractions_view, name='search_attractions'),
     path('get-user-trips/', views.get_user_trips_view, name='get_user_trips'),
     path('trip/create/', views.create_trip_view, name='create_trip'),
+    path('trip/view/<int:trip_id>/', views.view_trip, name='view_trip'),  # 新增：查看行程
+    path('trip/share/<int:trip_id>/', views.share_trip_view, name='share_trip'),  # 新增：分享行程
     path('trip/edit/<int:trip_id>/', views.edit_trip_view, name='edit_trip'),
     path('trip/delete/<int:trip_id>/', views.delete_trip_view, name='delete_trip'),
+    
+    # 公開行程查看（無需登入）
+    path('public/trip/<int:trip_id>/', views.public_trip_view, name='public_trip'),
     path('remove-from-trip/<int:attraction_id>/', views.remove_from_trip_view, name='remove_from_trip'),
     
     # 編輯行程相關 API

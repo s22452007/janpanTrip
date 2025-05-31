@@ -1000,3 +1000,104 @@ def add_attraction_to_trip(request):
             'success': False,
             'message': f'加入行程失敗：{str(e)}'
         })
+    
+
+@login_required
+def view_trip(request, trip_id):
+    """行程查看頁面（只讀）"""
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
+    
+    # 計算統計資料
+    total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+    trip_days = list(range(1, trip.duration_days + 1))
+    
+    # 整理每天的行程資料，並按照 visit_time 排序
+    day_itineraries = {}
+    for day in trip_days:
+        target_date = trip.start_time.date() + timedelta(days=day-1)
+        itinerary = Itinerary.objects.filter(trip=trip, date=target_date).first()
+        if itinerary:
+            # 為 itinerary 添加按時間排序的景點列表
+            itinerary.sorted_attractions = itinerary.itineraryattraction_set.all().order_by(
+                'visit_time', 'id'
+            )
+        day_itineraries[day] = itinerary
+    
+    context = {
+        'trip': trip,
+        'itineraries': itineraries,
+        'total_attractions': total_attractions,
+        'trip_days': trip_days,
+        'day_itineraries': day_itineraries,
+    }
+    return render(request, 'travel/view_trip.html', context)
+
+@login_required
+def share_trip_view(request, trip_id):
+    """生成行程分享資訊"""
+    if request.method == 'GET':
+        try:
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            
+            # 計算行程統計
+            total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+            
+            share_data = {
+                'trip_id': trip.id,
+                'trip_name': trip.trip_name,
+                'description': trip.description,
+                'start_date': trip.start_time.strftime('%Y/%m/%d'),
+                'end_date': trip.end_time.strftime('%Y/%m/%d'),
+                'duration_days': trip.duration_days,
+                'total_attractions': total_attractions,
+                # 修改為公開連結
+                'share_url': request.build_absolute_uri(f'/public/trip/{trip.id}/'),
+                'share_text': f'快來看看我的日本旅遊行程：{trip.trip_name} ({trip.start_time.strftime("%Y/%m/%d")} - {trip.end_time.strftime("%Y/%m/%d")})',
+            }
+            
+            return JsonResponse({'success': True, 'data': share_data})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': '無效的請求'})
+
+def public_trip_view(request, trip_id):
+    """公開行程查看（無需登入）"""
+    try:
+        trip = get_object_or_404(Trip, id=trip_id)
+        itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
+        
+        # 計算統計資料
+        total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+        trip_days = list(range(1, trip.duration_days + 1))
+        
+        # 整理每天的行程資料，並按照 visit_time 排序
+        day_itineraries = {}
+        for day in trip_days:
+            target_date = trip.start_time.date() + timedelta(days=day-1)
+            itinerary = Itinerary.objects.filter(trip=trip, date=target_date).first()
+            if itinerary:
+                # 為 itinerary 添加按時間排序的景點列表
+                itinerary.sorted_attractions = itinerary.itineraryattraction_set.all().order_by(
+                    'visit_time', 'id'
+                )
+            day_itineraries[day] = itinerary
+        
+        context = {
+            'trip': trip,
+            'itineraries': itineraries,
+            'total_attractions': total_attractions,
+            'trip_days': trip_days,
+            'day_itineraries': day_itineraries,
+            'is_public_view': True,  # 標記這是公開查看
+            'trip_owner': trip.user,  # 行程擁有者資訊
+        }
+        return render(request, 'travel/public_trip.html', context)
+        
+    except Exception as e:
+        # 如果行程不存在或其他錯誤，顯示錯誤頁面
+        return render(request, 'travel/trip_not_found.html', {
+            'error_message': '找不到指定的行程，可能已被刪除或設為私人。'
+        })

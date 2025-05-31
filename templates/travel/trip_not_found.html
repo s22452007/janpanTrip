@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}行程不存在{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <div class="error-icon">🧳</div>
+        <h2>找不到行程</h2>
+        <p>{{ error_message }}</p>
+        <div class="error-actions">
+            {% if user.is_authenticated %}
+                <a href="{% url 'travel:home' %}" class="btn-primary">返回我的行程</a>
+            {% else %}
+                <a href="{% url 'travel:home' %}" class="btn-primary">探索旅遊規劃</a>
+                <a href="{% url 'travel:login' %}" class="btn-secondary">登入</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.error-content {
+    background: white;
+    border-radius: 15px;
+    padding: 60px 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.error-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+}
+
+.error-content h2 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 28px;
+}
+
+.error-content p {
+    margin: 0 0 32px 0;
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.error-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #ff69b4;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #e55aa0;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-primary, .btn-secondary {
+        width: 200px;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

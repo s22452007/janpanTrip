@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+
+{% load travel_extras %}
+
+{% block title %}{{ trip.trip_name }} - 公開行程{% endblock %}
+
+{% block content %}
+<div class="public-trip-container">
+    <!-- 頂部標題區 -->
+    <div class="public-trip-header">
+        <div class="trip-title-section">
+            <h2>{{ trip.trip_name }}</h2>
+            <div class="trip-subtitle">
+                <span class="public-badge">公開行程</span>
+                <span class="trip-author">by {{ trip_owner.username }}</span>
+            </div>
+        </div>
+        <div class="action-buttons">
+            {% if user.is_authenticated %}
+                <a href="{% url 'travel:home' %}" class="back-home-btn">返回我的行程</a>
+            {% else %}
+                <a href="{% url 'travel:login' %}" class="login-btn">登入查看我的行程</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 行程資訊卡片 -->
+    <div class="trip-info-card">
+        <div class="trip-overview">
+            <div class="overview-item">
+                <div class="overview-label">行程時間</div>
+                <div class="overview-value">{{ trip.start_time|date:"Y/m/d" }} - {{ trip.end_time|date:"Y/m/d" }}</div>
+            </div>
+            <div class="overview-divider"></div>
+            <div class="overview-item">
+                <div class="overview-label">總天數</div>
+                <div class="overview-value">{{ trip.duration_days }}天</div>
+            </div>
+            <div class="overview-divider"></div>
+            <div class="overview-item">
+                <div class="overview-label">景點數量</div>
+                <div class="overview-value">{{ total_attractions }}個景點</div>
+            </div>
+        </div>
+        
+        {% if trip.description %}
+        <div class="trip-description">
+            <h4>行程描述</h4>
+            <p>{{ trip.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 未登入用戶提示 -->
+    {% if not user.is_authenticated %}
+    <div class="login-prompt">
+        <div class="prompt-content">
+            <div class="prompt-icon">✨</div>
+            <div class="prompt-text">
+                <h3>想要規劃自己的日本旅遊行程？</h3>
+                <p>註冊帳號即可開始規劃專屬於你的旅遊行程！</p>
+            </div>
+            <div class="prompt-actions">
+                <a href="{% url 'travel:register' %}" class="register-btn">立即註冊</a>
+                <a href="{% url 'travel:login' %}" class="login-link">已有帳號？登入</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 行程時間線 -->
+    <div class="itinerary-timeline">
+        {% for day in trip_days %}
+        <div class="day-section" data-day="{{ day }}">
+            <div class="day-header">
+                <div class="day-badge">
+                    <div class="day-number">{{ day }}</div>
+                    <div class="day-label">DAY</div>
+                </div>
+                {% with day_itinerary=day_itineraries|get_item:day %}
+                    <div class="day-info">
+                        <div class="day-title">第 {{ day }} 天</div>
+                        <div class="day-count">
+                            {% if day_itinerary %}
+                                {{ day_itinerary.sorted_attractions.count }} 個景點
+                            {% else %}
+                                0 個景點
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endwith %}
+            </div>
+            
+            <div class="day-attractions">
+                {% with day_itinerary=day_itineraries|get_item:day %}
+                    {% if day_itinerary and day_itinerary.sorted_attractions %}
+                        {% for itinerary_attraction in day_itinerary.sorted_attractions %}
+                        <div class="attraction-item">
+                            <div class="attraction-time">
+                                {% if itinerary_attraction.visit_time %}
+                                    {{ itinerary_attraction.visit_time|time:"H:i" }}
+                                {% else %}
+                                    09:00
+                                {% endif %}
+                                <span class="time-duration">- 
+                                    {% if itinerary_attraction.visit_time %}
+                                        {% with end_time=itinerary_attraction.visit_time|add_minutes:itinerary_attraction.duration_minutes %}
+                                            {{ end_time|time:"H:i" }}
+                                        {% endwith %}
+                                    {% else %}
+                                        11:00
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="attraction-content">
+                                <div class="attraction-image">
+                                    {% if itinerary_attraction.attraction.image %}
+                                        <img src="{{ itinerary_attraction.attraction.image.url }}" alt="{{ itinerary_attraction.attraction.name }}">
+                                    {% else %}
+                                        {% if itinerary_attraction.attraction.attraction_type.name == '寺廟神社' %}
+                                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% elif itinerary_attraction.attraction.attraction_type.name == '現代景點' %}
+                                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% else %}
+                                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="attraction-details">
+                                    <div class="attraction-name">{{ itinerary_attraction.attraction.name }}</div>
+                                    <div class="attraction-location">{{ itinerary_attraction.attraction.address }}</div>
+                                    <div class="attraction-rating">{{ itinerary_attraction.attraction.rating_stars }} {{ itinerary_attraction.attraction.rating }}</div>
+                                    <div class="attraction-type">{{ itinerary_attraction.attraction.attraction_type.name }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-day">
+                            <div class="empty-icon">📍</div>
+                            <p>這天還沒有安排景點</p>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 頁面底部行動呼籲 -->
+    {% if not user.is_authenticated %}
+    <div class="bottom-cta">
+        <h3>開始規劃你的日本之旅</h3>
+        <p>加入我們，輕鬆規劃專屬的旅遊行程</p>
+        <a href="{% url 'travel:register' %}" class="cta-button">免費註冊</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.public-trip-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f7fa;
+    min-height: 100vh;
+}
+
+.public-trip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.trip-title-section {
+    flex: 1;
+}
+
+.trip-title-section h2 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.trip-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.public-badge {
+    background: #28a745;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.trip-author {
+    color: #666;
+    font-size: 14px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.back-home-btn {
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.back-home-btn:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.trip-info-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.trip-overview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.overview-item {
+    text-align: center;
+    flex: 1;
+}
+
+.overview-label {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.overview-value {
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.overview-divider {
+    width: 1px;
+    height: 40px;
+    background: #e0e0e0;
+    margin: 0 20px;
+}
+
+.trip-description {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 20px;
+}
+
+.trip-description h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.trip-description p {
+    margin: 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.login-prompt {
+    background: linear-gradient(135deg, #ff69b4, #ff8fa3);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    color: white;
+    text-align: center;
+}
+
+.prompt-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.prompt-icon {
+    font-size: 48px;
+}
+
+.prompt-text h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+}
+
+.prompt-text p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.register-btn {
+    background: #ff69b4;
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.register-btn:hover {
+    background: #ee509f;
+}
+
+.login-link {
+    color: white;
+    text-decoration: underline;
+    opacity: 0.9;
+}
+
+.login-link:hover {
+    opacity: 1;
+}
+
+/* 繼承原有的時間線樣式 */
+.itinerary-timeline {
+    space-y: 25px;
+}
+
+.day-section {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.day-header {
+    background: linear-gradient(135deg, #ff69b4, #ff8fa3);
+    color: white;
+    padding: 20px 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.day-badge {
+    text-align: center;
+}
+
+.day-number {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.day-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.day-info {
+    flex: 1;
+}
+
+.day-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.day-count {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.day-attractions {
+    padding: 0;
+}
+
+.attraction-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 20px 25px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 20px;
+}
+
+.attraction-item:last-child {
+    border-bottom: none;
+}
+
+.attraction-time {
+    min-width: 100px;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ff69b4;
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+}
+
+.time-duration {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
+.attraction-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.attraction-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.attraction-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.attraction-details {
+    flex: 1;
+}
+
+.attraction-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.attraction-location {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.attraction-rating {
+    color: #ffa500;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.attraction-type {
+    display: inline-block;
+    background: #ff69b4;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.empty-day {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-day p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.bottom-cta {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    margin-top: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bottom-cta h3 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 24px;
+}
+
+.bottom-cta p {
+    margin: 0 0 24px 0;
+    color: #666;
+    font-size: 16px;
+}
+
+.cta-button {
+    background: #ff69b4;
+    color: white;
+    text-decoration: none;
+    padding: 12px 32px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    background: #e55aa0;
+    transform: translateY(-2px);
+}
+
+.login-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    color: #ff69b4;
+    border: 2px solid #ff69b4;
+}
+
+.login-btn:hover {
+    background: #ff69b4;
+    color: white;
+}
+
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .public-trip-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .trip-overview {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .overview-divider {
+        display: none;
+    }
+    
+    .attraction-content {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .attraction-time {
+        min-width: 80px;
+        font-size: 14px;
+    }
+    
+    .prompt-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+</style>
+{% endblock %}

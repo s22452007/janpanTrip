@@ -1,0 +1,557 @@
+{% extends 'base.html' %}
+
+{% load travel_extras %}
+
+{% block title %}{{ trip.trip_name }} - 行程查看{% endblock %}
+
+{% block content %}
+<div class="view-trip-container">
+    <!-- 頂部標題區 -->
+    <div class="view-trip-header">
+        <a href="{% url 'travel:home' %}" class="back-btn">← 返回行程列表</a>
+        <div class="trip-title-section">
+            <h2>{{ trip.trip_name }}</h2>
+            <div class="trip-subtitle">行程查看</div>
+        </div>
+        <div class="action-buttons">
+            <button class="share-trip-btn" onclick="shareTrip({{ trip.id }})">分享行程</button>
+            <a href="{% url 'travel:edit_trip' trip.id %}" class="edit-trip-btn">編輯行程</a>
+        </div>
+    </div>
+
+    <!-- 行程資訊卡片 -->
+    <div class="trip-info-card">
+        <div class="trip-overview">
+            <div class="overview-item">
+                <div class="overview-label">行程流程</div>
+                <div class="overview-value">{{ trip.start_time|date:"Y/m/d" }} - {{ trip.end_time|date:"Y/m/d" }}</div>
+            </div>
+            <div class="overview-divider"></div>
+            <div class="overview-item">
+                <div class="overview-label">總天數</div>
+                <div class="overview-value">{{ trip.duration_days }}天</div>
+            </div>
+            <div class="overview-divider"></div>
+            <div class="overview-item">
+                <div class="overview-label">景點數量</div>
+                <div class="overview-value">{{ total_attractions }}個景點</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 行程時間線 -->
+    <div class="itinerary-timeline">
+        {% for day in trip_days %}
+        <div class="day-section" data-day="{{ day }}">
+            <div class="day-header">
+                <div class="day-badge">
+                    <div class="day-number">{{ day }}</div>
+                    <div class="day-label">DAY</div>
+                </div>
+                {% with day_itinerary=day_itineraries|get_item:day %}
+                    <div class="day-info">
+                        <div class="day-title">第 {{ day }} 天</div>
+                        <div class="day-count">
+                            {% if day_itinerary %}
+                                {{ day_itinerary.sorted_attractions.count }} 個景點
+                            {% else %}
+                                0 個景點
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endwith %}
+            </div>
+            
+            <div class="day-attractions">
+                {% with day_itinerary=day_itineraries|get_item:day %}
+                    {% if day_itinerary and day_itinerary.sorted_attractions %}
+                        {% for itinerary_attraction in day_itinerary.sorted_attractions %}
+                        <div class="attraction-item">
+                            <div class="attraction-time">
+                                {% if itinerary_attraction.visit_time %}
+                                    {{ itinerary_attraction.visit_time|time:"H:i" }}
+                                {% else %}
+                                    09:00
+                                {% endif %}
+                                <span class="time-duration">- 
+                                    {% if itinerary_attraction.visit_time %}
+                                        {% with end_time=itinerary_attraction.visit_time|add_minutes:itinerary_attraction.duration_minutes %}
+                                            {{ end_time|time:"H:i" }}
+                                        {% endwith %}
+                                    {% else %}
+                                        11:00
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="attraction-content">
+                                <div class="attraction-image">
+                                    {% if itinerary_attraction.attraction.image %}
+                                        <img src="{{ itinerary_attraction.attraction.image.url }}" alt="{{ itinerary_attraction.attraction.name }}">
+                                    {% else %}
+                                        {% if itinerary_attraction.attraction.attraction_type.name == '寺廟神社' %}
+                                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% elif itinerary_attraction.attraction.attraction_type.name == '現代景點' %}
+                                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% else %}
+                                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="attraction-details">
+                                    <div class="attraction-name">{{ itinerary_attraction.attraction.name }}</div>
+                                    <div class="attraction-location">{{ itinerary_attraction.attraction.address }}</div>
+                                    <div class="attraction-rating">{{ itinerary_attraction.attraction.rating_stars }} {{ itinerary_attraction.attraction.rating }}</div>
+                                    <div class="attraction-type">{{ itinerary_attraction.attraction.attraction_type.name }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-day">
+                            <div class="empty-icon">📍</div>
+                            <p>這天還沒有安排景點</p>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.view-trip-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f7fa;
+    min-height: 100vh;
+}
+
+.view-trip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.back-btn {
+    color: #666;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
+
+.trip-title-section {
+    flex: 1;
+    text-align: center;
+}
+
+.trip-title-section h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.trip-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.edit-trip-btn {
+    background: #ff69b4;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.edit-trip-btn:hover {
+    background: #e55aa0;
+    transform: translateY(-1px);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.share-trip-btn {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.share-trip-btn:hover {
+    background: #138496;
+    transform: translateY(-1px);
+}
+
+.trip-info-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.trip-overview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.overview-item {
+    text-align: center;
+    flex: 1;
+}
+
+.overview-label {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.overview-value {
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.overview-divider {
+    width: 1px;
+    height: 40px;
+    background: #e0e0e0;
+    margin: 0 20px;
+}
+
+.itinerary-timeline {
+    space-y: 25px;
+}
+
+.day-section {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.day-header {
+    background: linear-gradient(135deg, #ff69b4, #ff8fa3);
+    color: white;
+    padding: 20px 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.day-badge {
+    text-align: center;
+}
+
+.day-number {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.day-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.day-info {
+    flex: 1;
+}
+
+.day-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.day-count {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.day-attractions {
+    padding: 0;
+}
+
+.attraction-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 20px 25px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 20px;
+}
+
+.attraction-item:last-child {
+    border-bottom: none;
+}
+
+.attraction-time {
+    min-width: 100px;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ff69b4;
+}
+
+.attraction-time {
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+}
+
+.time-duration {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
+.attraction-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.attraction-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.attraction-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.attraction-details {
+    flex: 1;
+}
+
+.attraction-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.attraction-location {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.attraction-rating {
+    color: #ffa500;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.attraction-type {
+    display: inline-block;
+    background: #ff69b4;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.empty-day {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-day p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .view-trip-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .trip-overview {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .overview-divider {
+        display: none;
+    }
+    
+    .attraction-content {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .attraction-time {
+        min-width: 80px;
+        font-size: 14px;
+    }
+}
+</style>
+
+<!-- 分享成功提示框 -->
+<div id="share-toast" class="share-toast">
+    <div class="toast-content">
+        <span class="toast-icon">✅</span>
+        <span class="toast-message">連結已複製到剪貼簿！</span>
+    </div>
+</div>
+
+<script>
+// 分享行程功能
+function shareTrip(tripId) {
+    fetch(`/trip/share/${tripId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const shareData = data.data;
+                
+                // 複製連結到剪貼簿
+                if (navigator.clipboard && window.isSecureContext) {
+                    // 使用現代的 Clipboard API
+                    navigator.clipboard.writeText(shareData.share_url)
+                        .then(() => {
+                            showShareToast('連結已複製到剪貼簿！');
+                        })
+                        .catch(() => {
+                            fallbackCopyText(shareData.share_url);
+                        });
+                } else {
+                    // 降級處理
+                    fallbackCopyText(shareData.share_url);
+                }
+            } else {
+                alert('獲取分享連結失敗：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('分享失敗:', error);
+            alert('分享功能暫時無法使用，請稍後再試');
+        });
+}
+
+// 降級複製方法
+function fallbackCopyText(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showShareToast('連結已複製到剪貼簿！');
+    } catch (err) {
+        console.error('複製失敗:', err);
+        // 顯示連結讓用戶手動複製
+        prompt('請手動複製以下連結：', text);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// 顯示分享成功提示
+function showShareToast(message) {
+    const toast = document.getElementById('share-toast');
+    const messageEl = toast.querySelector('.toast-message');
+    messageEl.textContent = message;
+    
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+</script>
+
+<style>
+/* 分享提示框樣式 */
+.share-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    background: #28a745;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.share-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast-icon {
+    font-size: 16px;
+}
+
+.toast-message {
+    font-weight: 500;
+}
+</style>
+
+{% endblock %}

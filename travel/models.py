@@ -112,14 +112,16 @@ class ItineraryAttraction(models.Model):
     itinerary = models.ForeignKey(Itinerary, on_delete=models.CASCADE, verbose_name='行程')
     attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE, verbose_name='景點')
     notes = models.TextField(blank=True, verbose_name='備註')
+    visit_time = models.TimeField(null=True, blank=True, verbose_name='參觀時間')
+    duration_minutes = models.PositiveIntegerField(default=120, verbose_name='預計停留時間(分鐘)')
     
     class Meta:
         verbose_name = '行程景點'
         verbose_name_plural = '行程景點'
-        unique_together = ['itinerary', 'attraction']
     
     def __str__(self):
-        return f"{self.itinerary.itinerary_name} - {self.attraction.name}"
+        time_str = f" ({self.visit_time.strftime('%H:%M')})" if self.visit_time else ""
+        return f"{self.itinerary.itinerary_name} - {self.attraction.name}{time_str}"
 
 class FavoriteAttraction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='使用者')

@@ -251,17 +251,43 @@ function handleAddToPlan(event) {
         alert('景點ID錯誤');
         return;
     }
-    
-    addToTrip(attractionId, button);
+
+    addToTrip(button);
 }
 
 // 加入行程功能
-function addToTrip(attractionId, button) {
+function addToTrip(button) {
+    console.log('=== addToTrip 開始 ===');
+    
+    // 獲取必要的數值
+    const tripId = document.getElementById('trip-select').value;
+    const selectedDate = document.getElementById('date-select').value;
+    const rememberChoice = document.getElementById('remember-trip').checked;
+    
+    console.log('tripId:', tripId);
+    console.log('selectedDate:', selectedDate);
+    console.log('rememberChoice:', rememberChoice);
+    
+    if (!tripId || !selectedDate) {
+        alert('請選擇行程和日期');
+        return;
+    }
+    
+    // 從按鈕獲取景點 ID
+    const attractionId = button.getAttribute('data-attraction-id');
+    if (!attractionId) {
+        alert('景點 ID 未找到，請重新載入頁面');
+        return;
+    }
+    
+    console.log('attractionId:', attractionId);
+    
     // 禁用按鈕防止重複點擊
     button.disabled = true;
     const originalText = button.textContent;
     button.textContent = '加入中...';
     
+    // 獲取 CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     if (!csrfToken) {
         alert('CSRF token 未找到，請重新載入頁面');
@@ -270,20 +296,61 @@ function addToTrip(attractionId, button) {
         return;
     }
     
-    fetch(`/add-to-plan/${attractionId}/`, {
+    // 發送請求
+    fetch('/add-attraction-to-trip/', {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken.value,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            attraction_id: attractionId
+            attraction_id: attractionId,
+            trip_id: tripId,
+            selected_date: selectedDate,
+            remember_choice: rememberChoice
         })
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        console.log('響應狀態:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('伺服器響應:', data);
+        
+        if (data.success) {
+            // 保存用戶偏好
+            if (rememberChoice) {
+                localStorage.setItem('preferred_trip_id', tripId);
+            }
+            
+            // 顯示成功訊息
+            if (typeof showMessage === 'function') {
+                showMessage(data.message, 'success');
+            }
+            
+            // 更新按鈕狀態
+            button.style.background = '#28a745';
+            button.textContent = '已加入';
+            
+            // 1秒後自動跳轉到行程編輯頁面
+            setTimeout(() => {
+                console.log('準備跳轉到:', `/trip/edit/${tripId}/`);
+                window.location.href = `/trip/edit/${tripId}/`;
+            }, 1000);
+            
+        } else {
+            alert(data.message || '加入行程失敗');
+            button.disabled = false;
+            button.textContent = originalText;
         }
+    })
+    .catch(error => {
+        console.error('加入行程請求失敗:', error);
+        alert('加入行程失敗，請稍後再試');
+        button.disabled = false;
+        button.textContent = originalText;
+    });
+}
         return response.json();
     })
     .then(data => {
@@ -300,10 +367,14 @@ function addToTrip(attractionId, button) {
             }, 2000);
             
             // 更新行程列表
-            updateTripList();
+            if (typeof updateTripList === 'function') {
+                updateTripList();
+            }
             
             // 顯示成功訊息
-            showMessage('景點已成功加入行程！', 'success');
+            if (typeof showMessage === 'function') {
+                showMessage('景點已成功加入行程！', 'success');
+            }
         } else {
             throw new Error(data.message || '加入失敗');
         }

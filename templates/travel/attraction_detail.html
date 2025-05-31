@@ -179,7 +179,9 @@
                 </div>
 
                 <!-- 加入行程按鈕 -->
-                <button class="add-to-trip-btn" id="add-to-trip-btn" onclick="addToTrip()" disabled>
+                <button class="add-to-trip-btn" 
+                        data-attraction-id="{{ attraction.id }}" 
+                        onclick="addToTrip(this)">
                     加入行程
                 </button>
 
@@ -626,36 +628,46 @@
     }
 }
 </style>
-
+{% csrf_token %}
 <script>
 // 頁面載入時執行的函數
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('頁面載入完成');
+    
     // 檢查是否有記住的行程偏好
     const rememberedTrip = localStorage.getItem('preferred_trip_id');
     if (rememberedTrip) {
         const tripSelect = document.getElementById('trip-select');
-        tripSelect.value = rememberedTrip;
-        loadTripDates(rememberedTrip);
+        if (tripSelect) {
+            tripSelect.value = rememberedTrip;
+            loadTripDates(rememberedTrip);
+        }
     }
     
     // 綁定行程選擇事件
-    document.getElementById('trip-select').addEventListener('change', function() {
-        const tripId = this.value;
-        if (tripId) {
-            loadTripDates(tripId);
-        } else {
-            hideDateSelector();
-        }
-    });
+    const tripSelect = document.getElementById('trip-select');
+    if (tripSelect) {
+        tripSelect.addEventListener('change', function() {
+            const tripId = this.value;
+            console.log('選擇的行程ID:', tripId);
+            if (tripId) {
+                loadTripDates(tripId);
+            } else {
+                hideDateSelector();
+            }
+        });
+    }
 });
 
 // 載入行程日期
 function loadTripDates(tripId) {
     if (!tripId) return;
     
+    console.log('載入行程日期:', tripId);
     fetch(`/get-trip-dates/${tripId}/`)
         .then(response => response.json())
         .then(data => {
+            console.log('日期資料:', data);
             if (data.success) {
                 showDateSelector(data.dates);
             } else {
@@ -669,8 +681,14 @@ function loadTripDates(tripId) {
 
 // 顯示日期選擇器
 function showDateSelector(dates) {
+    console.log('顯示日期選擇器，日期數量:', dates.length);
     const dateSelector = document.getElementById('date-selector');
     const dateSelect = document.getElementById('date-select');
+    
+    if (!dateSelector || !dateSelect) {
+        console.error('找不到日期選擇器元素');
+        return;
+    }
     
     // 清空選項
     dateSelect.innerHTML = '<option value="">請選擇日期...</option>';
@@ -685,54 +703,98 @@ function showDateSelector(dates) {
     
     dateSelector.style.display = 'block';
     
+    // 移除舊的事件監聽器
+    const newDateSelect = dateSelect.cloneNode(true);
+    dateSelect.parentNode.replaceChild(newDateSelect, dateSelect);
+    
     // 綁定日期選擇事件
-    dateSelect.addEventListener('change', function() {
-        const addBtn = document.getElementById('add-to-trip-btn');
-        addBtn.disabled = !this.value;
+    newDateSelect.addEventListener('change', function() {
+        const addBtn = document.querySelector('.add-to-trip-btn');
+        if (addBtn) {
+            addBtn.disabled = !this.value;
+            console.log('按鈕狀態:', addBtn.disabled ? '禁用' : '啟用');
+        }
     });
 }
 
 // 隱藏日期選擇器
 function hideDateSelector() {
+    console.log('隱藏日期選擇器');
     const dateSelector = document.getElementById('date-selector');
-    const addBtn = document.getElementById('add-to-trip-btn');
+    const addBtn = document.querySelector('.add-to-trip-btn');
     
-    dateSelector.style.display = 'none';
-    addBtn.disabled = true;
+    if (dateSelector) {
+        dateSelector.style.display = 'none';
+    }
+    if (addBtn) {
+        addBtn.disabled = true;
+    }
 }
 
 // 加入行程函數
-function addToTrip() {
+// 在 main.js 中的 addToTrip 函數，找到並替換成這個版本：
+
+function addToTrip(button) {
+    console.log('=== addToTrip 開始 ===');
+    
+    // 獲取必要的數值
     const tripId = document.getElementById('trip-select').value;
     const selectedDate = document.getElementById('date-select').value;
     const rememberChoice = document.getElementById('remember-trip').checked;
+    
+    console.log('tripId:', tripId);
+    console.log('selectedDate:', selectedDate);
+    console.log('rememberChoice:', rememberChoice);
     
     if (!tripId || !selectedDate) {
         alert('請選擇行程和日期');
         return;
     }
     
+    // 從按鈕獲取景點 ID
+    const attractionId = button.getAttribute('data-attraction-id');
+    if (!attractionId) {
+        alert('景點 ID 未找到，請重新載入頁面');
+        return;
+    }
+    
+    console.log('attractionId:', attractionId);
+    
     // 禁用按鈕防止重複點擊
-    const addBtn = document.getElementById('add-to-trip-btn');
-    addBtn.disabled = true;
-    addBtn.textContent = '加入中...';
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = '加入中...';
+    
+    // 獲取 CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('CSRF token 未找到，請重新載入頁面');
+        button.disabled = false;
+        button.textContent = originalText;
+        return;
+    }
     
     // 發送請求
     fetch('/add-attraction-to-trip/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': csrfToken.value,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            attraction_id: {{ attraction.id }},
+            attraction_id: attractionId,
             trip_id: tripId,
             selected_date: selectedDate,
             remember_choice: rememberChoice
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('響應狀態:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('伺服器響應:', data);
+        
         if (data.success) {
             // 保存用戶偏好
             if (rememberChoice) {
@@ -740,30 +802,31 @@ function addToTrip() {
             }
             
             // 顯示成功訊息
-            showMessage(data.message, 'success');
+            if (typeof showMessage === 'function') {
+                showMessage(data.message, 'success');
+            }
             
             // 更新按鈕狀態
-            addBtn.style.background = '#28a745';
-            addBtn.textContent = '已加入';
+            button.style.background = '#28a745';
+            button.textContent = '已加入';
             
-            // 2秒後恢復按鈕
+            // 1秒後自動跳轉到行程編輯頁面
             setTimeout(() => {
-                addBtn.disabled = false;
-                addBtn.style.background = '';
-                addBtn.textContent = '加入行程';
-            }, 2000);
+                console.log('準備跳轉到:', `/trip/edit/${tripId}/`);
+                window.location.href = `/trip/edit/${tripId}/`;
+            }, 1000);
             
         } else {
             alert(data.message || '加入行程失敗');
-            addBtn.disabled = false;
-            addBtn.textContent = '加入行程';
+            button.disabled = false;
+            button.textContent = originalText;
         }
     })
     .catch(error => {
         console.error('加入行程請求失敗:', error);
         alert('加入行程失敗，請稍後再試');
-        addBtn.disabled = false;
-        addBtn.textContent = '加入行程';
+        button.disabled = false;
+        button.textContent = originalText;
     });
 }
 

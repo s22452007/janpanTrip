@@ -746,91 +746,6 @@ def get_trip_dates(request, trip_id):
 
 @login_required
 @require_http_methods(["POST"])
-def add_attraction_to_trip(request):
-    """將景點加入到指定行程的指定日期"""
-    try:
-        data = json.loads(request.body)
-        attraction_id = data.get('attraction_id')
-        trip_id = data.get('trip_id')
-        selected_date = data.get('selected_date')
-        remember_choice = data.get('remember_choice', False)
-        
-        # 驗證資料
-        if not all([attraction_id, trip_id, selected_date]):
-            return JsonResponse({
-                'success': False,
-                'message': '缺少必要參數'
-            })
-        
-        attraction = get_object_or_404(Attraction, id=attraction_id)
-        trip = get_object_or_404(Trip, id=trip_id, user=request.user)
-        
-        # 轉換日期格式
-        selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
-        
-        # 檢查日期是否在行程範圍內
-        if not (trip.start_time.date() <= selected_date <= trip.end_time.date()):
-            return JsonResponse({
-                'success': False,
-                'message': '選擇的日期不在行程範圍內'
-            })
-        
-        # 獲取或創建當日行程
-        itinerary, created = Itinerary.objects.get_or_create(
-            trip=trip,
-            date=selected_date,
-            defaults={
-                'itinerary_name': f'{trip.trip_name} - {selected_date.strftime("%m/%d")}',
-                'start_time': trip.start_time.time(),
-                'end_time': trip.end_time.time(),
-            }
-        )
-        
-        # 檢查景點是否已經在行程中
-        if ItineraryAttraction.objects.filter(
-            itinerary=itinerary, 
-            attraction=attraction
-        ).exists():
-            return JsonResponse({
-                'success': False,
-                'message': '此景點已在該日期的行程中'
-            })
-        
-        # 檢查景點是否已經在其他日期的行程中
-        if ItineraryAttraction.objects.filter(
-            itinerary__trip=trip,
-            attraction=attraction
-        ).exists():
-            return JsonResponse({
-                'success': False,
-                'message': '此景點已在其他日期的行程中'
-            })
-        
-        # 添加景點到行程
-        ItineraryAttraction.objects.create(
-            itinerary=itinerary,
-            attraction=attraction,
-            notes=f'從景點詳情頁面加入 - {datetime.now().strftime("%Y-%m-%d %H:%M")}'
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'已成功將「{attraction.name}」加入到{selected_date.strftime("%m/%d")}的行程中！'
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'message': '無效的請求格式'
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'加入行程失敗：{str(e)}'
-        })
-
-@login_required
-@require_http_methods(["POST"])
 def toggle_favorite(request):
     """切換景點收藏狀態"""
     try:
@@ -876,4 +791,101 @@ def toggle_favorite(request):
         return JsonResponse({
             'success': False,
             'message': str(e)
+        })
+    
+import json
+from datetime import datetime
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+
+def add_attraction_to_trip(request):
+    """將景點加入到指定行程的指定日期"""
+    try:
+        data = json.loads(request.body)
+        attraction_id = data.get('attraction_id')
+        trip_id = data.get('trip_id')
+        selected_date = data.get('selected_date')
+        remember_choice = data.get('remember_choice', False)
+        
+        # 驗證資料
+        if not all([attraction_id, trip_id, selected_date]):
+            return JsonResponse({
+                'success': False,
+                'message': '缺少必要參數'
+            })
+        
+        attraction = get_object_or_404(Attraction, id=attraction_id)
+        trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+        
+        # 轉換日期格式
+        selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        
+        # 檢查日期是否在行程範圍內
+        if not (trip.start_time.date() <= selected_date <= trip.end_time.date()):
+            return JsonResponse({
+                'success': False,
+                'message': '選擇的日期不在行程範圍內'
+            })
+        
+        # 獲取或創建當日行程
+        itinerary, created = Itinerary.objects.get_or_create(
+            trip=trip,
+            date=selected_date,
+            defaults={
+                'itinerary_name': f'{trip.trip_name} - {selected_date.strftime("%m/%d")}',
+                'start_time': trip.start_time.time(),
+                'end_time': trip.end_time.time(),
+            }
+        )
+        
+        # 檢查景點是否已經在當天行程中
+        existing_today = ItineraryAttraction.objects.filter(
+            itinerary=itinerary, 
+            attraction=attraction
+        ).exists()
+        
+        # 檢查景點是否已經在其他日期的行程中
+        existing_other_days = ItineraryAttraction.objects.filter(
+            itinerary__trip=trip,
+            attraction=attraction
+        ).exclude(itinerary=itinerary).exists()
+        
+        # 決定訊息內容
+        if existing_today:
+            message = f'「{attraction.name}」已在{selected_date.strftime("%m/%d")}的行程中，已重新加入！'
+        elif existing_other_days:
+            message = f'「{attraction.name}」已在此行程的其他日期中，現在也加入到{selected_date.strftime("%m/%d")}！'
+        else:
+            message = f'已成功將「{attraction.name}」加入到{selected_date.strftime("%m/%d")}的行程中！'
+        
+        # 不管是否已存在，都允許加入（如果已存在就更新）
+        itinerary_attraction, created = ItineraryAttraction.objects.get_or_create(
+            itinerary=itinerary,
+            attraction=attraction,
+            defaults={
+                'notes': f'從景點詳情頁面加入 - {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+            }
+        )
+        
+        # 如果已存在，更新筆記
+        if not created:
+            itinerary_attraction.notes = f'重新加入 - {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+            itinerary_attraction.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'trip_id': trip_id  # 加入 trip_id 供前端跳轉使用
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '無效的請求格式'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'加入行程失敗：{str(e)}'
         })

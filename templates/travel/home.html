@@ -45,7 +45,8 @@
                 <!-- 動態加載景點卡片 -->
                 {% for attraction in attractions %}
                                     <div class="attraction-card">
-                        {% if attraction.image %}
+                                        <div class="attraction-image-container">  <!-- 新增這個容器 -->
+                    {% if attraction.image %}
                             <img src="{{ attraction.image.url }}" alt="{{ attraction.name }}" class="attraction-image">
                     {% else %}
                         <!-- 根據景點類型顯示不同預設圖片 -->
@@ -61,6 +62,15 @@
                             <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
                         {% endif %}
                     {% endif %}
+                     <!-- 新增收藏按鈕 -->
+                    <button class="favorite-btn" 
+                            onclick="toggleFavorite({{ attraction.id }}, this)"
+                            title="收藏景點">
+                        
+                    </button>
+                </div>
+
+                    
                     <div class="attraction-info">
                         <div class="attraction-name">{{ attraction.name }}</div>
                         <div class="attraction-location">{{ attraction.region.name }}・{{ attraction.address }}</div>

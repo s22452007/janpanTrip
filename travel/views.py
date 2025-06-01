@@ -1101,3 +1101,230 @@ def public_trip_view(request, trip_id):
         return render(request, 'travel/trip_not_found.html', {
             'error_message': '找不到指定的行程，可能已被刪除或設為私人。'
         })
+    
+# 在您的 views.py 中添加/修改以下函數
+
+# 修改您現有的 toggle_favorite 函數
+@login_required
+@require_http_methods(["POST"])
+def toggle_favorite(request):
+    """切換景點收藏狀態"""
+    try:
+        data = json.loads(request.body)
+        attraction_id = data.get('attraction_id')
+        
+        if not attraction_id:
+            return JsonResponse({
+                'success': False,
+                'message': '缺少景點ID'
+            })
+        
+        attraction = get_object_or_404(Attraction, id=attraction_id)
+        
+        # 檢查是否已收藏
+        favorite, created = FavoriteAttraction.objects.get_or_create(
+            user=request.user,
+            attraction=attraction
+        )
+        
+        if created:
+            # 新建收藏
+            is_favorited = True
+            message = f'已將「{attraction.name}」加入收藏'
+        else:
+            # 取消收藏
+            favorite.delete()
+            is_favorited = False
+            message = f'已將「{attraction.name}」從收藏中移除'
+        
+        return JsonResponse({
+            'success': True,
+            'is_favorited': is_favorited,
+            'message': message
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '無效的請求格式'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        })
+
+# 添加新的收藏頁面視圖
+@login_required
+def favorites_view(request):
+    """收藏頁面視圖"""
+    try:
+        # 獲取用戶的所有收藏
+        favorites = FavoriteAttraction.objects.filter(user=request.user).select_related('attraction')
+        
+        # 構建收藏景點數據
+        favorite_attractions = []
+        for favorite in favorites:
+            attraction = favorite.attraction
+            
+            # 預設圖片
+            default_images = {
+                '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
+                '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
+                '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
+                '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
+                '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop'
+            }
+            
+            favorite_attractions.append({
+                'id': attraction.id,
+                'name': attraction.name,
+                'location': f"{attraction.region.name}・{attraction.address}",
+                'type': attraction.attraction_type.name,
+                'rating': float(attraction.rating),
+                'rating_stars': attraction.rating_stars,
+                'image': attraction.image.url if attraction.image else default_images.get(
+                    attraction.attraction_type.name, 
+                    'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=200&fit=crop'
+                ),
+                'created_at': favorite.created_at,
+            })
+        
+        # 按收藏時間排序（最新的在前）
+        favorite_attractions.sort(key=lambda x: x['created_at'], reverse=True)
+        
+        context = {
+            'favorite_attractions': favorite_attractions,
+            'favorites_count': len(favorite_attractions)
+        }
+        
+        return render(request, 'travel/favorites.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'載入收藏失敗：{str(e)}')
+        return render(request, 'travel/favorites.html', {'favorite_attractions': []})
+
+# 修改您現有的搜索函數，添加收藏狀態
+def search_attractions_view(request):
+    search_query = request.GET.get('search', '')
+    region = request.GET.get('region', '')
+    attraction_type = request.GET.get('type', '')
+    rating = request.GET.get('rating', '')
+    
+    # 建立查詢
+    attractions = Attraction.objects.all()
+    
+    if search_query:
+        attractions = attractions.filter(
+            Q(name__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    if region and region != '地區 ▼':
+        attractions = attractions.filter(region__name=region)
+    
+    if attraction_type and attraction_type != '類型 ▼':
+        attractions = attractions.filter(attraction_type__name=attraction_type)
+    
+    if rating and rating != '評分 ▼':
+        if rating == '5星':
+            attractions = attractions.filter(rating=5)
+        elif rating == '4星以上':
+            attractions = attractions.filter(rating__gte=4)
+        elif rating == '3星以上':
+            attractions = attractions.filter(rating__gte=3)
+    
+    # 獲取用戶的收藏列表
+    user_favorites = set()
+    if request.user.is_authenticated:
+        user_favorites = set(
+            FavoriteAttraction.objects.filter(user=request.user)
+            .values_list('attraction_id', flat=True)
+        )
+    
+    # 預設圖片映射
+    default_images = {
+        '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
+        '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
+        '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
+        '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
+        '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop'
+    }
+    
+    attractions_data = [
+        {
+            'id': attr.id,
+            'name': attr.name,
+            'location': f"{attr.region.name}・{attr.address}",
+            'rating': float(attr.rating),
+            'rating_stars': attr.rating_stars,
+            'type': attr.attraction_type.name,
+            'image': attr.image.url if attr.image else default_images.get(
+                attr.attraction_type.name, 
+                'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop'
+            ),
+            'is_favorited': attr.id in user_favorites,  # 添加收藏狀態
+        }
+        for attr in attractions[:20]  # 限制返回20個結果
+    ]
+    
+    return JsonResponse({'success': True, 'attractions': attractions_data})
+
+# 添加從收藏中移除的函數
+@login_required
+@require_http_methods(["POST"])
+def remove_from_favorites(request):
+    """從收藏中移除景點"""
+    try:
+        data = json.loads(request.body)
+        attraction_id = data.get('attraction_id')
+        
+        if not attraction_id:
+            return JsonResponse({
+                'success': False,
+                'message': '景點ID不能為空'
+            })
+        
+        # 獲取並刪除收藏記錄
+        favorite = get_object_or_404(
+            FavoriteAttraction,
+            user=request.user,
+            attraction_id=attraction_id
+        )
+        
+        attraction_name = favorite.attraction.name
+        favorite.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'已將「{attraction_name}」從收藏中移除'
+        })
+        
+    except FavoriteAttraction.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': '該景點不在您的收藏中'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'操作失敗：{str(e)}'
+        })
+
+# 更新您現有的 get_user_trips_view 函數（用於模態框）
+@login_required
+def get_user_trips_view(request):
+    trips = Trip.objects.filter(user=request.user)
+    trips_data = [
+        {
+            'id': trip.id,
+            'title': trip.trip_name,  # 使用 title 作為鍵名，保持一致性
+            'trip_name': trip.trip_name,
+            'start_date': trip.start_time.strftime('%Y-%m-%d'),
+            'end_date': trip.end_time.strftime('%Y-%m-%d'),
+            'attraction_count': sum(itinerary.attractions.count() for itinerary in trip.itinerary_set.all()),
+        }
+        for trip in trips
+    ]
+    
+    return JsonResponse({'success': True, 'trips': trips_data})

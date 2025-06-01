@@ -1,0 +1,282 @@
+<!-- templates/travel/favorites.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的收藏 - 日本旅遊規劃</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* 收藏頁面專用樣式 */
+        .favorites-header {
+            background: linear-gradient(135deg, #ff69b4, #ff1744);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        .favorites-header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        
+        .favorites-stats {
+            margin-top: 10px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .favorites-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .favorites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .favorite-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .favorite-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .attraction-image-container {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .attraction-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .favorite-card:hover .attraction-image {
+            transform: scale(1.05);
+        }
+        
+        .remove-favorite-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .remove-favorite-btn:hover {
+            background: rgba(255, 0, 0, 1);
+            transform: scale(1.1);
+        }
+        
+        .attraction-info {
+            padding: 20px;
+        }
+        
+        .attraction-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .attraction-location {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .attraction-rating {
+            color: #ff69b4;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .favorite-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .favorite-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .view-detail-btn {
+            background: #ff69b4;
+            color: white;
+        }
+        
+        .view-detail-btn:hover {
+            background: #e91e63;
+            transform: translateY(-2px);
+        }
+        
+        .add-to-plan-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .add-to-plan-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .empty-favorites {
+            text-align: center;
+            padding: 80px 20px;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .empty-favorites h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .empty-favorites p {
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .btn-primary {
+            background: #ff69b4;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: #e91e63;
+            transform: translateY(-2px);
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        .back-button:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    
+    <!-- 返回按鈕 -->
+    <button class="back-button" onclick="history.back()" title="返回上一頁">
+        ←
+    </button>
+    
+    <!-- 收藏頁面標題 -->
+    <div class="favorites-header">
+        <h1>💖 我的收藏</h1>
+        <div class="favorites-stats">
+            共收藏了 {{ favorites_count }} 個景點
+        </div>
+    </div>
+    
+    <!-- 收藏內容 -->
+    <div class="favorites-container">
+        {% if favorite_attractions %}
+            <div class="favorites-grid">
+                {% for attraction in favorite_attractions %}
+                <div class="favorite-card" onclick="navigateToAttractionFromFavorites({{ attraction.id }})">
+                    <div class="attraction-image-container">
+                        <img src="{{ attraction.image }}" 
+                             alt="{{ attraction.name }}" 
+                             class="attraction-image">
+                        <button class="remove-favorite-btn" 
+                                onclick="removeFromFavorites({{ attraction.id }}, this)"
+                                title="從收藏中移除">
+                            ✕
+                        </button>
+                    </div>
+                    <div class="attraction-info">
+                        <div class="attraction-name">{{ attraction.name }}</div>
+                        <div class="attraction-location">{{ attraction.location }}</div>
+                        <div class="attraction-rating">{{ attraction.rating_stars }} {{ attraction.rating }}</div>
+                        <div class="favorite-actions">
+                            <button class="view-detail-btn" 
+                                    onclick="event.stopPropagation(); navigateToAttractionFromFavorites({{ attraction.id }})">
+                                查看詳情
+                            </button>
+                            <button class="add-to-plan-btn" 
+                                    onclick="event.stopPropagation(); showAddToPlanModal({{ attraction.id }})" 
+                                    data-attraction-id="{{ attraction.id }}">
+                                加入行程
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-favorites">
+                <div class="empty-icon">💔</div>
+                <h3>還沒有收藏的景點</h3>
+                <p>快去發現一些美麗的景點並加入收藏吧！</p>
+                <button onclick="window.location.href='{% url 'travel:home' %}'" class="btn-primary">
+                    探索景點
+                </button>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 加載 JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

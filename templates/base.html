@@ -16,6 +16,7 @@
             </div>
             <div class="nav-menu">
                 {% if user.is_authenticated %}
+                <a href="{% url 'travel:favorites' %}" class="nav-link">我的收藏 💖</a> 
                     <div class="nav-user">
                         <span class="welcome-text">歡迎, {{ user.username }}!</span>
                         <div class="user-dropdown">

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from travel.models import Region, AttractionType, Attraction, UserProfile, Trip, Itinerary, ItineraryAttraction, FavoriteAttraction
+from travel.models import Region, AttractionType, Attraction, UserProfile, Trip, Itinerary, FavoriteAttraction
 from decimal import Decimal
 from datetime import datetime, date, time
 
@@ -113,7 +113,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': modern,
                 'address': '東京都墨田區押上1-1-2',
-                'rating': Decimal('4.5'),
                 'website': 'https://www.tokyo-skytree.jp/',
                 'phone': '0570-55-0634',
                 'opening_hours': '8:00-22:00',
@@ -125,7 +124,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': temple,
                 'address': '東京都台東區淺草2-3-1',
-                'rating': Decimal('4.4'),
                 'opening_hours': '6:00-17:00',
                 'features': '雷門、五重塔、仲見世通商店街',
             },
@@ -135,7 +133,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': temple,
                 'address': '東京都澀谷區代代木神園町1-1',
-                'rating': Decimal('4.3'),
                 'opening_hours': '5:00-18:00',
                 'features': '神宮御苑、寶物殿、大鳥居',
             },
@@ -145,7 +142,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': theme_park,
                 'address': '千葉縣浦安市舞濱1-1',
-                'rating': Decimal('4.6'),
                 'website': 'https://www.tokyodisneyresort.jp/',
                 'phone': '045-330-5211',
                 'opening_hours': '8:00-22:00',
@@ -157,7 +153,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': food,
                 'address': '東京都中央區築地4-16-2',
-                'rating': Decimal('4.2'),
                 'opening_hours': '5:00-14:00',
                 'features': '新鮮海鮮、壽司、玉子燒',
             },
@@ -167,7 +162,6 @@ class Command(BaseCommand):
                 'region': tokyo,
                 'attraction_type': modern,
                 'address': '東京都澀谷區道玄坂2-1',
-                'rating': Decimal('4.1'),
                 'opening_hours': '24小時',
                 'features': '忠犬八公像、澀谷天空觀景台、購物中心',
             },
@@ -179,7 +173,6 @@ class Command(BaseCommand):
                 'region': osaka,
                 'attraction_type': historic,
                 'address': '大阪府大阪市中央區大阪城1-1',
-                'rating': Decimal('4.3'),
                 'phone': '06-6941-3044',
                 'opening_hours': '9:00-17:00',
                 'features': '天守閣、大阪城公園、櫻花季美景',
@@ -190,7 +183,6 @@ class Command(BaseCommand):
                 'region': osaka,
                 'attraction_type': food,
                 'address': '大阪府大阪市中央區道頓堀',
-                'rating': Decimal('4.4'),
                 'opening_hours': '24小時',
                 'features': '章魚燒、大阪燒、格力高跑跑人看板',
             },
@@ -200,7 +192,6 @@ class Command(BaseCommand):
                 'region': osaka,
                 'attraction_type': theme_park,
                 'address': '大阪府大阪市此花區櫻島2-1-33',
-                'rating': Decimal('4.5'),
                 'website': 'https://www.usj.co.jp/',
                 'phone': '0570-20-0606',
                 'opening_hours': '8:30-22:00',
@@ -214,7 +205,6 @@ class Command(BaseCommand):
                 'region': kyoto,
                 'attraction_type': temple,
                 'address': '京都府京都市東山區清水1-294',
-                'rating': Decimal('4.6'),
                 'phone': '075-551-1234',
                 'opening_hours': '6:00-18:00',
                 'features': '木造舞台、音羽瀑布、三年坂二年坂',
@@ -225,7 +215,6 @@ class Command(BaseCommand):
                 'region': kyoto,
                 'attraction_type': temple,
                 'address': '京都府京都市伏見區深草薮之內町68',
-                'rating': Decimal('4.5'),
                 'phone': '075-641-7331',
                 'opening_hours': '24小時',
                 'features': '千本鳥居、稻荷山登山步道',
@@ -236,7 +225,6 @@ class Command(BaseCommand):
                 'region': kyoto,
                 'attraction_type': temple,
                 'address': '京都府京都市北區金閣寺町1',
-                'rating': Decimal('4.4'),
                 'phone': '075-461-0013',
                 'opening_hours': '9:00-17:00',
                 'features': '金色舍利殿、鏡湖池、日式庭園',

@@ -97,11 +97,11 @@
                 <div class="day-section" data-day="{{ day }}">
                     <div class="day-header">
                         <div class="day-number">{{ day }}</div>
-                        {% with day_itinerary=day_itineraries|get_item:day %}
+                        {% with day_attractions=day_itineraries|get_item:day %}
                             <div class="day-title">第 {{ day }} 天 
                                 <span class="day-count">
-                                    {% if day_itinerary %}
-                                        {{ day_itinerary.itineraryattraction_set.count }} 個景點
+                                    {% if day_attractions %}
+                                        {{ day_attractions.count }} 個景點
                                     {% else %}
                                         0 個景點
                                     {% endif %}
@@ -111,44 +111,43 @@
                     </div>
                     
                     <div class="day-attractions" id="day-{{ day }}-attractions">
-                        {% with day_itinerary=day_itineraries|get_item:day %}
-                            {% if day_itinerary %}
-                                <!-- 使用排序後的景點列表 -->
-                                {% for itinerary_attraction in day_itinerary.sorted_attractions %}
-                                <div class="itinerary-item" data-attraction-id="{{ itinerary_attraction.id }}">
+                        {% with day_attractions=day_itineraries|get_item:day %}
+                            {% if day_attractions %}
+                                <!-- 直接迴圈景點列表 -->
+                                {% for itinerary_item in day_attractions %}
+                                <div class="itinerary-item" data-attraction-id="{{ itinerary_item.id }}">
                                     <div class="item-image">
-                                        {% if itinerary_attraction.attraction.image %}
-                                            <img src="{{ itinerary_attraction.attraction.image.url }}" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% if itinerary_item.attraction.image %}
+                                            <img src="{{ itinerary_item.attraction.image.url }}" alt="{{ itinerary_item.attraction.name }}">
                                         {% else %}
-                                            {% if itinerary_attraction.attraction.attraction_type.name == '寺廟神社' %}
-                                                <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=60&h=60&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
-                                            {% elif itinerary_attraction.attraction.attraction_type.name == '現代景點' %}
-                                                <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=60&h=60&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                            {% if itinerary_item.attraction.attraction_type.name == '寺廟神社' %}
+                                                <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=60&h=60&fit=crop" alt="{{ itinerary_item.attraction.name }}">
+                                            {% elif itinerary_item.attraction.attraction_type.name == '現代景點' %}
+                                                <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=60&h=60&fit=crop" alt="{{ itinerary_item.attraction.name }}">
                                             {% else %}
-                                                <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=60&h=60&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                                <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=60&h=60&fit=crop" alt="{{ itinerary_item.attraction.name }}">
                                             {% endif %}
                                         {% endif %}
                                     </div>
                                     <div class="item-info">
-                                        <div class="item-name">{{ itinerary_attraction.attraction.name }}</div>
-                                        <div class="item-location">{{ itinerary_attraction.attraction.address }}</div>
+                                        <div class="item-name">{{ itinerary_item.attraction.name }}</div>
+                                        <div class="item-location">{{ itinerary_item.attraction.address }}</div>
                                         <div class="item-controls">
                                             <span>天數：</span>
-                                            <select class="day-change-select" onchange="changeDayForAttraction({{ itinerary_attraction.id }}, this.value)">
+                                            <select class="day-change-select" onchange="changeDayForAttraction({{ itinerary_item.id }}, this.value)">
                                                 {% for d in trip_days %}
                                                     <option value="{{ d }}" {% if d == day %}selected{% endif %}>第{{ d }}天</option>
                                                 {% endfor %}
                                             </select>
                                             <span>⏰</span>
-                                            <!-- 顯示實際儲存的時間 -->
                                             <input type="time" 
                                                 class="time-input" 
-                                                value="{% if itinerary_attraction.visit_time %}{{ itinerary_attraction.visit_time|time:'H:i' }}{% else %}09:00{% endif %}"
-                                                onchange="updateAttractionTime({{ itinerary_attraction.id }}, this.value)">
+                                                value="{% if itinerary_item.visit_time %}{{ itinerary_item.visit_time|time:'H:i' }}{% else %}09:00{% endif %}"
+                                                onchange="updateAttractionTime({{ itinerary_item.id }}, this.value)">
                                         </div>
                                     </div>
                                     <div class="item-actions">
-                                        <button class="remove-btn" onclick="removeFromItinerary({{ itinerary_attraction.id }})">🗑️</button>
+                                        <button class="remove-btn" onclick="removeFromItinerary({{ itinerary_item.id }})">🗑️</button>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -156,8 +155,8 @@
                         {% endwith %}
                         
                         <!-- 空狀態 -->
-                        {% with day_itinerary=day_itineraries|get_item:day %}
-                            {% if not day_itinerary or day_itinerary.sorted_attractions.count == 0 %}
+                        {% with day_attractions=day_itineraries|get_item:day %}
+                            {% if not day_attractions or day_attractions.count == 0 %}
                             <div class="empty-day">
                                 <p>這天還沒有安排景點</p>
                                 <p class="empty-hint">從左側選擇景點並設定為第{{ day }}天</p>
@@ -172,6 +171,7 @@
     </div>
 </div>
 
+<!-- 保持原有的 CSS 樣式 -->
 <style>
 .edit-trip-container {
     max-width: 1400px;
@@ -321,11 +321,6 @@
     color: #666;
     font-size: 13px;
     margin-bottom: 4px;
-}
-
-.attraction-rating {
-    color: #ffa500;
-    font-size: 13px;
 }
 
 .attraction-controls {
@@ -568,7 +563,7 @@ function searchAttractions() {
     const region = document.getElementById('region-filter').value;
     const type = document.getElementById('type-filter').value;
     
-    console.log('搜索參數:', { searchTerm, region, type }); // 調試用
+    console.log('搜索參數:', { searchTerm, region, type });
     
     const params = new URLSearchParams({
         search: searchTerm,
@@ -585,7 +580,7 @@ function searchAttractions() {
             return response.json();
         })
         .then(data => {
-            console.log('搜索結果:', data); // 調試用
+            console.log('搜索結果:', data);
             if (data.success) {
                 updateAttractionsList(data.attractions);
             } else {
@@ -621,7 +616,6 @@ function updateAttractionsList(attractions) {
             <div class="attraction-info">
                 <div class="attraction-name">${attraction.name}</div>
                 <div class="attraction-location">${attraction.location}</div>
-                <div class="attraction-rating">${attraction.rating_stars} ${attraction.rating}</div>
             </div>
             <div class="attraction-controls">
                 <select class="day-select" data-attraction-id="${attraction.id}">
@@ -641,7 +635,7 @@ function addToItinerary(attractionId) {
     const daySelect = document.querySelector(`[data-attraction-id="${attractionId}"]`);
     const selectedDay = daySelect.value;
     
-    console.log('加入行程:', { attractionId, selectedDay }); // 調試用
+    console.log('加入行程:', { attractionId, selectedDay });
     
     // 禁用按鈕防止重複點擊
     const addBtn = daySelect.parentElement.querySelector('.add-btn');
@@ -667,7 +661,7 @@ function addToItinerary(attractionId) {
         return response.json();
     })
     .then(data => {
-        console.log('加入結果:', data); // 調試用
+        console.log('加入結果:', data);
         if (data.success) {
             // 顯示成功訊息
             showMessage(data.message, 'success');
@@ -692,9 +686,9 @@ function addToItinerary(attractionId) {
 }
 
 // 從行程中移除
-function removeFromItinerary(itineraryAttractionId) {
+function removeFromItinerary(itineraryId) {
     if (confirm('確定要從行程中移除這個景點嗎？')) {
-        fetch(`/remove-from-trip/${itineraryAttractionId}/`, {
+        fetch(`/remove-from-trip/${itineraryId}/`, {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',
@@ -720,7 +714,7 @@ function removeFromItinerary(itineraryAttractionId) {
 }
 
 // 更改景點天數
-function changeDayForAttraction(itineraryAttractionId, newDay) {
+function changeDayForAttraction(itineraryId, newDay) {
     fetch('/change-attraction-day/', {
         method: 'POST',
         headers: {
@@ -728,7 +722,7 @@ function changeDayForAttraction(itineraryAttractionId, newDay) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            itinerary_attraction_id: itineraryAttractionId,
+            itinerary_attraction_id: itineraryId,
             new_day: newDay
         })
     })
@@ -750,7 +744,7 @@ function changeDayForAttraction(itineraryAttractionId, newDay) {
 }
 
 // 更新景點時間
-function updateAttractionTime(itineraryAttractionId, newTime) {
+function updateAttractionTime(itineraryId, newTime) {
     fetch('/update-attraction-time/', {
         method: 'POST',
         headers: {
@@ -758,7 +752,7 @@ function updateAttractionTime(itineraryAttractionId, newTime) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            itinerary_attraction_id: itineraryAttractionId,
+            itinerary_attraction_id: itineraryId,
             new_time: newTime
         })
     })
@@ -777,7 +771,6 @@ function updateAttractionTime(itineraryAttractionId, newTime) {
 
 // 顯示訊息的輔助函數
 function showMessage(message, type = 'info') {
-    // 創建訊息元素
     const messageDiv = document.createElement('div');
     messageDiv.className = `alert alert-${type}`;
     messageDiv.style.cssText = `
@@ -793,7 +786,6 @@ function showMessage(message, type = 'info') {
         animation: slideIn 0.3s ease;
     `;
     
-    // 設定背景顏色
     switch(type) {
         case 'success':
             messageDiv.style.background = '#28a745';
@@ -808,7 +800,6 @@ function showMessage(message, type = 'info') {
     messageDiv.textContent = message;
     document.body.appendChild(messageDiv);
     
-    // 3秒後自動移除
     setTimeout(() => {
         messageDiv.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {

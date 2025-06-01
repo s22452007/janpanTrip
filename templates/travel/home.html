@@ -31,12 +31,6 @@
                         <option>自然風光</option>
                         <option>美食</option>
                     </select>
-                    <select class="filter-select">
-                        <option>評分 ▼</option>
-                        <option>5星</option>
-                        <option>4星以上</option>
-                        <option>3星以上</option>
-                    </select>
                     <button class="search-btn">搜尋</button>
                 </div>
             </div>
@@ -74,11 +68,11 @@
                     <div class="attraction-info">
                         <div class="attraction-name">{{ attraction.name }}</div>
                         <div class="attraction-location">{{ attraction.region.name }}・{{ attraction.address }}</div>
-                        <div class="attraction-rating">{{ attraction.rating_stars }} {{ attraction.rating }}</div>
+                        <!-- 移除評分顯示，改為顯示景點類型 -->
+                        <div class="attraction-type">{{ attraction.attraction_type.name }}</div>
                         <button class="view-detail-btn" onclick="event.stopPropagation(); viewAttractionDetail({{ attraction.id }})">查看詳情</button>
                     </div>
                 </div>
-                </a>
                 {% empty %}
                 <div class="no-attractions">
                     <p>目前沒有景點資料，請先添加一些景點。</p>
@@ -96,7 +90,7 @@
                         <div class="trip-info">
                             <div class="trip-name">{{ trip.trip_name }}</div>
                             <div class="trip-meta">
-                                <div class="trip-dates">{{ trip.start_time|date:"Y/m/d" }} - {{ trip.end_time|date:"Y/m/d" }}</div>
+                                <div class="trip-dates">{{ trip.start_date|date:"Y/m/d" }} - {{ trip.end_date|date:"Y/m/d" }}</div>
                                 <div class="trip-stats">已規劃景點: <span class="attraction-count">{{ trip.total_attractions|default:0 }}</span></div>
                             </div>
                         </div>
@@ -165,19 +159,19 @@
                         <div class="form-group">
                             <label class="form-label">喜好的旅遊類型</label>
                             <select name="travel_type" class="form-input">
-                                <option value="culture" {% if user.userprofile.travel_type == 'culture' %}selected{% endif %}>文化體驗</option>
-                                <option value="nature" {% if user.userprofile.travel_type == 'nature' %}selected{% endif %}>自然風光</option>
-                                <option value="food" {% if user.userprofile.travel_type == 'food' %}selected{% endif %}>美食探索</option>
-                                <option value="shopping" {% if user.userprofile.travel_type == 'shopping' %}selected{% endif %}>購物娛樂</option>
+                                <option value="culture">文化體驗</option>
+                                <option value="nature">自然風光</option>
+                                <option value="food">美食探索</option>
+                                <option value="shopping">購物娛樂</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">旅行預算範圍</label>
                             <select name="budget_range" class="form-input">
-                                <option value="budget" {% if user.userprofile.budget_range == 'budget' %}selected{% endif %}>經濟型</option>
-                                <option value="mid" {% if user.userprofile.budget_range == 'mid' %}selected{% endif %}>中等型</option>
-                                <option value="luxury" {% if user.userprofile.budget_range == 'luxury' %}selected{% endif %}>高端型</option>
+                                <option value="budget">經濟型</option>
+                                <option value="mid">中等型</option>
+                                <option value="luxury">高端型</option>
                             </select>
                         </div>
                     </div>
@@ -241,6 +235,20 @@
         </div>
     </div>
 </div>
+
+<style>
+/* 為新的景點類型樣式 */
+.attraction-type {
+    color: #ff69b4;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 105, 180, 0.1);
+    border-radius: 12px;
+    display: inline-block;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

@@ -134,20 +134,18 @@
             <div class="stats-card">
                 <h3 class="section-title">景點統計</h3>
                 <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-label">遊客評分</div>
-                        <div class="stat-value rating">
-                            <span class="stars">{{ attraction.rating_stars }}</span>
-                            <span class="rating-number">{{ attraction.rating }}/5.0</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">評論數量</div>
-                        <div class="stat-value">15,420</div>
-                    </div>
+                    <!-- 移除評分相關統計，改為顯示其他資訊 -->
                     <div class="stat-item">
                         <div class="stat-label">景點類型</div>
                         <div class="stat-value">{{ attraction.attraction_type.name }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">所在地區</div>
+                        <div class="stat-value">{{ attraction.region.name }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">熱門程度</div>
+                        <div class="stat-value">★★★★☆</div>
                     </div>
                 </div>
             </div>
@@ -476,23 +474,6 @@
     color: #333;
 }
 
-.stat-value.rating {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-}
-
-.stars {
-    color: #ffa500;
-    font-size: 16px;
-}
-
-.rating-number {
-    font-size: 14px;
-    color: #ff69b4;
-}
-
 /* 加入行程區域 */
 .trip-selector, .date-selector {
     margin-bottom: 20px;
@@ -732,8 +713,6 @@ function hideDateSelector() {
 }
 
 // 加入行程函數
-// 在 main.js 中的 addToTrip 函數，找到並替換成這個版本：
-
 function addToTrip(button) {
     console.log('=== addToTrip 開始 ===');
     

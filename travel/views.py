@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.db.models import Q
-from .models import Attraction, Trip, UserProfile, Region, AttractionType, Itinerary, ItineraryAttraction, FavoriteAttraction
+from .models import Attraction, Trip, UserProfile, Region, AttractionType, Itinerary, FavoriteAttraction
 from datetime import datetime, date, time
 from datetime import timedelta
 import json
@@ -84,18 +84,15 @@ def logout_view(request):
 
 @login_required
 def home_view(request):
-    # 獲取景點資料
+    # 獲取景點資料（移除評分相關）
     attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
     
     # 獲取用戶行程並計算景點數量
     user_trips = Trip.objects.filter(user=request.user)[:5]  # 顯示前5個行程
     
-    # 為每個行程添加景點數量
+    # 為每個行程添加景點數量（使用新的 Itinerary 模型）
     for trip in user_trips:
-        trip.total_attractions = sum(
-            itinerary.attractions.count() 
-            for itinerary in trip.itinerary_set.all()
-        )
+        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
     context = {
         'attractions': attractions,
@@ -138,44 +135,21 @@ def add_to_plan_view(request, attraction_id):
                 trip_name="我的日本行程",
                 defaults={
                     'description': '自動創建的行程',
-                    'start_time': datetime(2024, 12, 1, 9, 0),
-                    'end_time': datetime(2024, 12, 7, 18, 0),
+                    'start_date': datetime(2024, 12, 1, 9, 0),  # 更新欄位名
+                    'end_date': datetime(2024, 12, 7, 18, 0),   # 更新欄位名
                 }
             )
             
-            if created:
-                # 如果創建了新行程，也創建對應的每日行程
-                trip_date = current_trip.start_time.date()
-                itinerary = Itinerary.objects.create(
-                    trip=current_trip,
-                    itinerary_name=f"{current_trip.trip_name} - 第1天",
-                    date=trip_date,
-                    start_time=time(9, 0),
-                    end_time=time(18, 0)
-                )
-            else:
-                # 使用現有行程的第一個 itinerary，如果沒有就創建
-                itinerary = current_trip.itinerary_set.first()
-                if not itinerary:
-                    itinerary = Itinerary.objects.create(
-                        trip=current_trip,
-                        itinerary_name=f"{current_trip.trip_name} - 第1天",
-                        date=current_trip.start_time.date(),
-                        start_time=time(9, 0),
-                        end_time=time(18, 0)
-                    )
-            
-            # 移除重複檢查，直接添加景點到行程
-            
             # 計算建議時間
-            existing_attractions = ItineraryAttraction.objects.filter(
-                itinerary=itinerary
+            existing_attractions = Itinerary.objects.filter(
+                trip=current_trip,
+                date=current_trip.start_date.date()  # 使用新欄位名
             ).order_by('visit_time')
             
             if existing_attractions.exists():
                 last_attraction = existing_attractions.last()
                 if last_attraction.visit_time:
-                    last_time = datetime.combine(itinerary.date, last_attraction.visit_time)
+                    last_time = datetime.combine(current_trip.start_date.date(), last_attraction.visit_time)
                     suggested_time = (last_time + timedelta(hours=2)).time()
                 else:
                     suggested_time = time(9, 0)
@@ -186,12 +160,13 @@ def add_to_plan_view(request, attraction_id):
             if suggested_time > time(21, 0):
                 suggested_time = time(9, 0)
             
-            # 添加景點到行程
-            ItineraryAttraction.objects.create(
-                itinerary=itinerary,
+            # 直接添加到 Itinerary（不再需要中間表）
+            Itinerary.objects.create(
+                trip=current_trip,
+                date=current_trip.start_date.date(),
                 attraction=attraction,
                 visit_time=suggested_time,
-                notes=f'添加於 {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+                duration_minutes=120
             )
             
             return JsonResponse({'success': True, 'message': '景點已加入行程'})
@@ -204,7 +179,7 @@ def search_attractions_view(request):
     search_query = request.GET.get('search', '')
     region = request.GET.get('region', '')
     attraction_type = request.GET.get('type', '')
-    rating = request.GET.get('rating', '')
+    # 移除評分篩選
     
     # 建立查詢
     attractions = Attraction.objects.all()
@@ -221,14 +196,6 @@ def search_attractions_view(request):
     if attraction_type and attraction_type != '類型 ▼':
         attractions = attractions.filter(attraction_type__name=attraction_type)
     
-    if rating and rating != '評分 ▼':
-        if rating == '5星':
-            attractions = attractions.filter(rating=5)
-        elif rating == '4星以上':
-            attractions = attractions.filter(rating__gte=4)
-        elif rating == '3星以上':
-            attractions = attractions.filter(rating__gte=3)
-    
     # 預設圖片映射
     default_images = {
         '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
@@ -243,8 +210,7 @@ def search_attractions_view(request):
             'id': attr.id,
             'name': attr.name,
             'location': f"{attr.region.name}・{attr.address}",
-            'rating': float(attr.rating),
-            'rating_stars': attr.rating_stars,
+            # 移除評分相關欄位
             'type': attr.attraction_type.name,
             'image': attr.image.url if attr.image else default_images.get(
                 attr.attraction_type.name, 
@@ -262,10 +228,10 @@ def get_user_trips_view(request):
     trips_data = [
         {
             'id': trip.id,
-            'trip_name': trip.trip_name,  # 使用新的欄位名稱
-            'start_time': trip.start_time.strftime('%Y-%m-%d'),
-            'end_time': trip.end_time.strftime('%Y-%m-%d'),
-            'attraction_count': sum(itinerary.attractions.count() for itinerary in trip.itinerary_set.all()),
+            'trip_name': trip.trip_name,
+            'start_time': trip.start_date.strftime('%Y-%m-%d'),  # 更新欄位名
+            'end_time': trip.end_date.strftime('%Y-%m-%d'),      # 更新欄位名
+            'attraction_count': Itinerary.objects.filter(trip=trip).count(),  # 使用新的計算方式
         }
         for trip in trips
     ]
@@ -284,34 +250,35 @@ def settings_view(request):
 @login_required
 def edit_trip_view(request, trip_id):
     trip = get_object_or_404(Trip, id=trip_id, user=request.user)
-    itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
     
-    # 獲取所有景點（不再排除已添加的）
-    available_attractions = Attraction.objects.all()[:20]  # 限制數量
+    # 獲取所有景點
+    available_attractions = Attraction.objects.all()[:20]
     
     # 獲取地區和景點類型用於篩選
     regions = Region.objects.all()
     attraction_types = AttractionType.objects.all()
     
-    # 計算統計資料 - 改為計算實際的 ItineraryAttraction 數量
-    total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+    # 計算統計資料
+    total_attractions = Itinerary.objects.filter(trip=trip).count()
     trip_days = list(range(1, trip.duration_days + 1))
     
-    # 整理每天的行程資料，並按照 visit_time 排序
+    # 整理每天的行程資料
     day_itineraries = {}
     for day in trip_days:
-        target_date = trip.start_time.date() + timedelta(days=day-1)
-        itinerary = Itinerary.objects.filter(trip=trip, date=target_date).first()
-        if itinerary:
-            # 重要：為 itinerary 添加按時間排序的景點列表
-            itinerary.sorted_attractions = itinerary.itineraryattraction_set.all().order_by(
-                'visit_time', 'id'  # 先按 visit_time 排序，如果時間相同則按 id 排序
-            )
-        day_itineraries[day] = itinerary
+        target_date = trip.start_date.date() + timedelta(days=day-1)
+        day_attractions = Itinerary.objects.filter(
+            trip=trip, 
+            date=target_date
+        ).order_by('visit_time', 'id')
+        day_itineraries[day] = day_attractions
+        
+        # 調試輸出
+        print(f"第{day}天 ({target_date}): {day_attractions.count()}個景點")
+        for item in day_attractions:
+            print(f"  - {item.attraction.name} at {item.visit_time}")
     
     context = {
         'trip': trip,
-        'itineraries': itineraries,
         'available_attractions': available_attractions,
         'regions': regions,
         'attraction_types': attraction_types,
@@ -345,13 +312,14 @@ def remove_from_trip_view(request, attraction_id):
     """從行程中移除景點"""
     if request.method == 'DELETE':
         try:
-            itinerary_attraction = get_object_or_404(
-                ItineraryAttraction, 
+            # 使用新的 Itinerary 模型
+            itinerary_item = get_object_or_404(
+                Itinerary, 
                 id=attraction_id,
-                itinerary__trip__user=request.user
+                trip__user=request.user
             )
-            attraction_name = itinerary_attraction.attraction.name
-            itinerary_attraction.delete()
+            attraction_name = itinerary_item.attraction.name
+            itinerary_item.delete()
             
             return JsonResponse({
                 'success': True,
@@ -459,7 +427,6 @@ def create_trip_view(request):
                 return render(request, 'travel/create_trip.html')
             
             # 組合日期和時間
-            from datetime import datetime, date, time
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
             start_time_obj = datetime.strptime(start_time_str, '%H:%M').time()
@@ -479,24 +446,9 @@ def create_trip_view(request):
                 user=request.user,
                 trip_name=trip_name,
                 description=description,
-                start_time=start_datetime,
-                end_time=end_datetime
+                start_date=start_datetime,  # 使用新欄位名
+                end_date=end_datetime       # 使用新欄位名
             )
-            
-            # 為每一天創建 Itinerary
-            current_date = start_date_obj
-            day_count = 1
-            
-            while current_date <= end_date_obj:
-                Itinerary.objects.create(
-                    trip=trip,
-                    itinerary_name=f"{trip_name} - 第{day_count}天",
-                    date=current_date,
-                    start_time=start_time_obj,
-                    end_time=end_time_obj
-                )
-                current_date = current_date + timedelta(days=1)
-                day_count += 1
             
             messages.success(request, f'行程「{trip_name}」建立成功！')
             return redirect('travel:edit_trip', trip_id=trip.id)
@@ -561,9 +513,8 @@ def search_available_attractions_view(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required
-@login_required
 def add_to_itinerary_view(request):
-    """添加景點到行程（允許重複）"""
+    """添加景點到行程"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -575,28 +526,15 @@ def add_to_itinerary_view(request):
             attraction = get_object_or_404(Attraction, id=attraction_id)
             
             # 計算目標日期
-            target_date = trip.start_time.date() + timedelta(days=day-1)
+            target_date = trip.start_date.date() + timedelta(days=day-1)  # 使用新欄位名
             
-            # 獲取或創建對應日期的 Itinerary
-            itinerary, created = Itinerary.objects.get_or_create(
+            # 計算建議的參觀時間
+            existing_attractions = Itinerary.objects.filter(
                 trip=trip,
-                date=target_date,
-                defaults={
-                    'itinerary_name': f"{trip.trip_name} - 第{day}天",
-                    'start_time': time(9, 0),
-                    'end_time': time(18, 0)
-                }
-            )
-            
-            # 移除重複檢查，允許同一景點多次添加
-            
-            # 計算建議的參觀時間（基於該天已有的景點）
-            existing_attractions = ItineraryAttraction.objects.filter(
-                itinerary=itinerary
+                date=target_date
             ).order_by('visit_time')
             
             if existing_attractions.exists():
-                # 找到最後一個景點的時間，加上2小時作為新景點的開始時間
                 last_attraction = existing_attractions.last()
                 if last_attraction.visit_time:
                     last_time = datetime.combine(target_date, last_attraction.visit_time)
@@ -607,15 +545,16 @@ def add_to_itinerary_view(request):
                 suggested_time = time(9, 0)
             
             # 確保時間不超過當天結束時間
-            if suggested_time > time(21, 0):  # 如果超過晚上9點，重置為早上9點
+            if suggested_time > time(21, 0):
                 suggested_time = time(9, 0)
             
-            # 添加景點到行程，設定建議時間
-            itinerary_attraction = ItineraryAttraction.objects.create(
-                itinerary=itinerary,
+            # 直接創建 Itinerary 項目
+            Itinerary.objects.create(
+                trip=trip,
+                date=target_date,
                 attraction=attraction,
                 visit_time=suggested_time,
-                notes=f'添加於 {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+                duration_minutes=120
             )
             
             return JsonResponse({
@@ -638,7 +577,7 @@ def change_attraction_day_view(request):
             new_day = int(data.get('new_day'))
             
             itinerary_attraction = get_object_or_404(
-                ItineraryAttraction, 
+                Itinerary , 
                 id=itinerary_attraction_id,
                 itinerary__trip__user=request.user
             )
@@ -670,50 +609,29 @@ def change_attraction_day_view(request):
 
 @login_required
 def update_attraction_time_view(request):
-    """更新景點時間並返回重新排序的資料"""
+    """更新景點時間"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            itinerary_attraction_id = data.get('itinerary_attraction_id')
+            itinerary_id = data.get('itinerary_attraction_id')  # 實際上是 itinerary_id
             new_time = data.get('new_time')
             
-            itinerary_attraction = get_object_or_404(
-                ItineraryAttraction, 
-                id=itinerary_attraction_id,
-                itinerary__trip__user=request.user
+            itinerary_item = get_object_or_404(
+                Itinerary, 
+                id=itinerary_id,
+                trip__user=request.user
             )
             
             # 將時間字符串轉換為 time 對象
             time_obj = datetime.strptime(new_time, '%H:%M').time()
             
             # 更新 visit_time 欄位
-            itinerary_attraction.visit_time = time_obj
-            itinerary_attraction.save()
-            
-            # 獲取同一天的所有景點，按時間重新排序
-            itinerary = itinerary_attraction.itinerary
-            sorted_attractions = itinerary.itineraryattraction_set.all().order_by(
-                'visit_time', 'id'
-            )
-            
-            # 構建返回的排序資料
-            attractions_data = []
-            for ia in sorted_attractions:
-                attractions_data.append({
-                    'id': ia.id,
-                    'attraction_id': ia.attraction.id,
-                    'name': ia.attraction.name,
-                    'address': ia.attraction.address,
-                    'visit_time': ia.visit_time.strftime('%H:%M') if ia.visit_time else '09:00',
-                    'image_url': ia.attraction.image.url if ia.attraction.image else None,
-                    'attraction_type': ia.attraction.attraction_type.name
-                })
+            itinerary_item.visit_time = time_obj
+            itinerary_item.save()
             
             return JsonResponse({
                 'success': True, 
-                'message': f'時間已更新為 {new_time}',
-                'sorted_attractions': attractions_data,
-                'itinerary_date': itinerary.date.isoformat()
+                'message': f'時間已更新為 {new_time}'
             })
             
         except Exception as e:
@@ -728,7 +646,7 @@ def attraction_detail(request, attraction_id):
     # 獲取用戶的行程列表
     user_trips = []
     if request.user.is_authenticated:
-        user_trips = Trip.objects.filter(user=request.user, end_time__gte=datetime.now())
+        user_trips = Trip.objects.filter(user=request.user, end_date__gte=datetime.now())  # 修正：end_time -> end_date
     
     context = {
         'attraction': attraction,
@@ -813,7 +731,7 @@ def add_attraction_to_trip(request):
         # 移除重複檢查，直接添加景點到行程
         
         # 計算建議時間
-        existing_attractions = ItineraryAttraction.objects.filter(
+        existing_attractions = Itinerary.objects.filter(
             itinerary=itinerary
         ).order_by('visit_time')
         
@@ -832,7 +750,7 @@ def add_attraction_to_trip(request):
             suggested_time = time(9, 0)
         
         # 添加景點到行程
-        ItineraryAttraction.objects.create(
+        Itinerary .objects.create(
             itinerary=itinerary,
             attraction=attraction,
             visit_time=suggested_time,
@@ -951,13 +869,13 @@ def add_attraction_to_trip(request):
         )
         
         # 檢查景點是否已經在當天行程中
-        existing_today = ItineraryAttraction.objects.filter(
+        existing_today = Itinerary.objects.filter(
             itinerary=itinerary, 
             attraction=attraction
         ).exists()
         
         # 檢查景點是否已經在其他日期的行程中
-        existing_other_days = ItineraryAttraction.objects.filter(
+        existing_other_days = Itinerary.objects.filter(
             itinerary__trip=trip,
             attraction=attraction
         ).exclude(itinerary=itinerary).exists()
@@ -1004,29 +922,25 @@ def add_attraction_to_trip(request):
 
 @login_required
 def view_trip(request, trip_id):
-    """行程查看頁面（只讀）"""
     trip = get_object_or_404(Trip, id=trip_id, user=request.user)
-    itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
     
     # 計算統計資料
-    total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+    total_attractions = Itinerary.objects.filter(trip=trip).count()
     trip_days = list(range(1, trip.duration_days + 1))
     
-    # 整理每天的行程資料，並按照 visit_time 排序
+    # 整理每天的行程資料
     day_itineraries = {}
     for day in trip_days:
-        target_date = trip.start_time.date() + timedelta(days=day-1)
-        itinerary = Itinerary.objects.filter(trip=trip, date=target_date).first()
-        if itinerary:
-            # 為 itinerary 添加按時間排序的景點列表
-            itinerary.sorted_attractions = itinerary.itineraryattraction_set.all().order_by(
-                'visit_time', 'id'
-            )
-        day_itineraries[day] = itinerary
+        target_date = trip.start_date.date() + timedelta(days=day-1)
+        # 直接獲取該天的所有景點安排，已經按時間排序
+        day_attractions = Itinerary.objects.filter(
+            trip=trip, 
+            date=target_date
+        ).order_by('visit_time', 'id')
+        day_itineraries[day] = day_attractions
     
     context = {
         'trip': trip,
-        'itineraries': itineraries,
         'total_attractions': total_attractions,
         'trip_days': trip_days,
         'day_itineraries': day_itineraries,
@@ -1041,7 +955,7 @@ def share_trip_view(request, trip_id):
             trip = get_object_or_404(Trip, id=trip_id, user=request.user)
             
             # 計算行程統計
-            total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+            total_attractions = Itinerary.objects.filter(trip=trip).count()
             
             share_data = {
                 'trip_id': trip.id,
@@ -1067,10 +981,10 @@ def public_trip_view(request, trip_id):
     """公開行程查看（無需登入）"""
     try:
         trip = get_object_or_404(Trip, id=trip_id)
-        itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'start_time')
+        itineraries = Itinerary.objects.filter(trip=trip).order_by('date', 'visit_time')
         
         # 計算統計資料
-        total_attractions = ItineraryAttraction.objects.filter(itinerary__trip=trip).count()
+        total_attractions = Itinerary.objects.filter(trip=trip).count()
         trip_days = list(range(1, trip.duration_days + 1))
         
         # 整理每天的行程資料，並按照 visit_time 排序

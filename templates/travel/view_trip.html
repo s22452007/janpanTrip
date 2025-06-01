@@ -24,7 +24,7 @@
         <div class="trip-overview">
             <div class="overview-item">
                 <div class="overview-label">行程流程</div>
-                <div class="overview-value">{{ trip.start_time|date:"Y/m/d" }} - {{ trip.end_time|date:"Y/m/d" }}</div>
+                <div class="overview-value">{{ trip.start_date|date:"Y/m/d" }} - {{ trip.end_date|date:"Y/m/d" }}</div>
             </div>
             <div class="overview-divider"></div>
             <div class="overview-item">
@@ -48,12 +48,12 @@
                     <div class="day-number">{{ day }}</div>
                     <div class="day-label">DAY</div>
                 </div>
-                {% with day_itinerary=day_itineraries|get_item:day %}
+                {% with day_attractions=day_itineraries|get_item:day %}
                     <div class="day-info">
                         <div class="day-title">第 {{ day }} 天</div>
                         <div class="day-count">
-                            {% if day_itinerary %}
-                                {{ day_itinerary.sorted_attractions.count }} 個景點
+                            {% if day_attractions %}
+                                {{ day_attractions.count }} 個景點
                             {% else %}
                                 0 個景點
                             {% endif %}
@@ -63,19 +63,19 @@
             </div>
             
             <div class="day-attractions">
-                {% with day_itinerary=day_itineraries|get_item:day %}
-                    {% if day_itinerary and day_itinerary.sorted_attractions %}
-                        {% for itinerary_attraction in day_itinerary.sorted_attractions %}
+                {% with day_attractions=day_itineraries|get_item:day %}
+                    {% if day_attractions %}
+                        {% for itinerary_item in day_attractions %}
                         <div class="attraction-item">
                             <div class="attraction-time">
-                                {% if itinerary_attraction.visit_time %}
-                                    {{ itinerary_attraction.visit_time|time:"H:i" }}
+                                {% if itinerary_item.visit_time %}
+                                    {{ itinerary_item.visit_time|time:"H:i" }}
                                 {% else %}
                                     09:00
                                 {% endif %}
                                 <span class="time-duration">- 
-                                    {% if itinerary_attraction.visit_time %}
-                                        {% with end_time=itinerary_attraction.visit_time|add_minutes:itinerary_attraction.duration_minutes %}
+                                    {% if itinerary_item.visit_time %}
+                                        {% with end_time=itinerary_item.visit_time|add_minutes:itinerary_item.duration_minutes %}
                                             {{ end_time|time:"H:i" }}
                                         {% endwith %}
                                     {% else %}
@@ -86,24 +86,23 @@
                             
                             <div class="attraction-content">
                                 <div class="attraction-image">
-                                    {% if itinerary_attraction.attraction.image %}
-                                        <img src="{{ itinerary_attraction.attraction.image.url }}" alt="{{ itinerary_attraction.attraction.name }}">
+                                    {% if itinerary_item.attraction.image %}
+                                        <img src="{{ itinerary_item.attraction.image.url }}" alt="{{ itinerary_item.attraction.name }}">
                                     {% else %}
-                                        {% if itinerary_attraction.attraction.attraction_type.name == '寺廟神社' %}
-                                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
-                                        {% elif itinerary_attraction.attraction.attraction_type.name == '現代景點' %}
-                                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                        {% if itinerary_item.attraction.attraction_type.name == '寺廟神社' %}
+                                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=80&h=80&fit=crop" alt="{{ itinerary_item.attraction.name }}">
+                                        {% elif itinerary_item.attraction.attraction_type.name == '現代景點' %}
+                                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop" alt="{{ itinerary_item.attraction.name }}">
                                         {% else %}
-                                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=80&h=80&fit=crop" alt="{{ itinerary_attraction.attraction.name }}">
+                                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=80&h=80&fit=crop" alt="{{ itinerary_item.attraction.name }}">
                                         {% endif %}
                                     {% endif %}
                                 </div>
                                 
                                 <div class="attraction-details">
-                                    <div class="attraction-name">{{ itinerary_attraction.attraction.name }}</div>
-                                    <div class="attraction-location">{{ itinerary_attraction.attraction.address }}</div>
-                                    <div class="attraction-rating">{{ itinerary_attraction.attraction.rating_stars }} {{ itinerary_attraction.attraction.rating }}</div>
-                                    <div class="attraction-type">{{ itinerary_attraction.attraction.attraction_type.name }}</div>
+                                    <div class="attraction-name">{{ itinerary_item.attraction.name }}</div>
+                                    <div class="attraction-location">{{ itinerary_item.attraction.address }}</div>
+                                    <div class="attraction-type">{{ itinerary_item.attraction.attraction_type.name }}</div>
                                 </div>
                             </div>
                         </div>
@@ -323,9 +322,6 @@
     background: #f8f9fa;
     border-radius: 8px;
     border-left: 4px solid #ff69b4;
-}
-
-.attraction-time {
     font-weight: 600;
     color: #333;
     font-size: 16px;
@@ -373,12 +369,6 @@
 
 .attraction-location {
     color: #666;
-    font-size: 14px;
-    margin-bottom: 4px;
-}
-
-.attraction-rating {
-    color: #ffa500;
     font-size: 14px;
     margin-bottom: 4px;
 }

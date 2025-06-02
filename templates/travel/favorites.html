@@ -1,282 +1,389 @@
-<!-- templates/travel/favorites.html -->
-{% load static %}
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的收藏 - 日本旅遊規劃</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <style>
-        /* 收藏頁面專用樣式 */
-        .favorites-header {
-            background: linear-gradient(135deg, #ff69b4, #ff1744);
-            color: white;
-            padding: 40px 0;
-            text-align: center;
-        }
-        
-        .favorites-header h1 {
-            margin: 0;
-            font-size: 2.5em;
-        }
-        
-        .favorites-stats {
-            margin-top: 10px;
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
-        .favorites-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-        
-        .favorites-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-        
-        .favorite-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .favorite-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-        }
-        
-        .attraction-image-container {
-            position: relative;
-            height: 200px;
-            overflow: hidden;
-        }
-        
-        .attraction-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-        
-        .favorite-card:hover .attraction-image {
-            transform: scale(1.05);
-        }
-        
-        .remove-favorite-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .remove-favorite-btn:hover {
-            background: rgba(255, 0, 0, 1);
-            transform: scale(1.1);
-        }
-        
-        .attraction-info {
-            padding: 20px;
-        }
-        
-        .attraction-name {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        
-        .attraction-location {
-            color: #666;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-        
-        .attraction-rating {
-            color: #ff69b4;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        
-        .favorite-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .favorite-actions button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        .view-detail-btn {
-            background: #ff69b4;
-            color: white;
-        }
-        
-        .view-detail-btn:hover {
-            background: #e91e63;
-            transform: translateY(-2px);
-        }
-        
-        .add-to-plan-btn {
-            background: #28a745;
-            color: white;
-        }
-        
-        .add-to-plan-btn:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-        
-        .empty-favorites {
-            text-align: center;
-            padding: 80px 20px;
-            color: #666;
-        }
-        
-        .empty-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
-        }
-        
-        .empty-favorites h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .empty-favorites p {
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        
-        .btn-primary {
-            background: #ff69b4;
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background: #e91e63;
-            transform: translateY(-2px);
-        }
-        
-        .back-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            z-index: 100;
-        }
-        
-        .back-button:hover {
-            background: white;
-            transform: scale(1.1);
-        }
-    </style>
-</head>
-<body>
-    {% csrf_token %}
-    
-    <!-- 返回按鈕 -->
-    <button class="back-button" onclick="history.back()" title="返回上一頁">
-        ←
-    </button>
-    
-    <!-- 收藏頁面標題 -->
-    <div class="favorites-header">
-        <h1>💖 我的收藏</h1>
-        <div class="favorites-stats">
-            共收藏了 {{ favorites_count }} 個景點
+{% extends 'base.html' %}
+
+{% block title %}我的收藏 - 日本旅遊規劃{% endblock %}
+
+{% block content %}
+<!-- 粉色頂部區塊 -->
+<div class="favorites-header">
+    <div class="header-content">
+        <div class="user-greeting">
+            <span class="user-icon">👤</span>
+            <span>歡迎回來，{{ user.username }}</span>
         </div>
-    </div>
-    
-    <!-- 收藏內容 -->
-    <div class="favorites-container">
-        {% if favorite_attractions %}
-            <div class="favorites-grid">
-                {% for attraction in favorite_attractions %}
-                <div class="favorite-card" onclick="navigateToAttractionFromFavorites({{ attraction.id }})">
-                    <div class="attraction-image-container">
-                        <img src="{{ attraction.image }}" 
-                             alt="{{ attraction.name }}" 
-                             class="attraction-image">
-                        <button class="remove-favorite-btn" 
-                                onclick="removeFromFavorites({{ attraction.id }}, this)"
-                                title="從收藏中移除">
-                            ✕
-                        </button>
-                    </div>
-                    <div class="attraction-info">
-                        <div class="attraction-name">{{ attraction.name }}</div>
-                        <div class="attraction-location">{{ attraction.location }}</div>
-                        <div class="attraction-rating">{{ attraction.rating_stars }} {{ attraction.rating }}</div>
-                        <div class="favorite-actions">
-                            <button class="view-detail-btn" 
-                                    onclick="event.stopPropagation(); navigateToAttractionFromFavorites({{ attraction.id }})">
-                                查看詳情
-                            </button>
-                            <button class="add-to-plan-btn" 
-                                    onclick="event.stopPropagation(); showAddToPlanModal({{ attraction.id }})" 
-                                    data-attraction-id="{{ attraction.id }}">
-                                加入行程
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+        
+        <h1 class="favorites-title">我的收藏景點</h1>
+        
+        <div class="favorites-count">
+            <div class="count-number">{{ favorites|length }}</div>
+            <div class="count-label">已收藏景點</div>
+        </div>
+        
+        {% if favorites|length > 0 %}
+        <p class="favorites-subtitle">您已收藏了 {{ favorites|length }} 個精彩景點，開始規劃您的旅程吧！</p>
         {% else %}
-            <div class="empty-favorites">
-                <div class="empty-icon">💔</div>
-                <h3>還沒有收藏的景點</h3>
-                <p>快去發現一些美麗的景點並加入收藏吧！</p>
-                <button onclick="window.location.href='{% url 'travel:home' %}'" class="btn-primary">
-                    探索景點
-                </button>
-            </div>
+        <p class="favorites-subtitle">還沒有收藏任何景點，去發現一些美麗的地方吧！</p>
         {% endif %}
     </div>
+</div>
+
+<!-- 景點展示區域 -->
+<div class="container">
+    {% if favorites and favorites|length > 0 %}
+    <div class="attractions-grid">
+        {% for favorite in favorites %}
+        <div class="attraction-card" onclick="viewAttractionDetail({{ favorite.attraction.id }})">
+            <div class="attraction-image-container">
+                {% if favorite.attraction.image %}
+                    <img src="{{ favorite.attraction.image.url }}" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                {% else %}
+                    <!-- 根據景點類型顯示不同預設圖片 -->
+                    {% if favorite.attraction.attraction_type.name == '寺廟神社' %}
+                        <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=250&fit=crop" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                    {% elif favorite.attraction.attraction_type.name == '現代景點' %}
+                        <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=250&fit=crop" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                    {% elif favorite.attraction.attraction_type.name == '自然風光' %}
+                        <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=250&fit=crop" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                    {% elif favorite.attraction.attraction_type.name == '美食' %}
+                        <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=400&h=250&fit=crop" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=400&h=250&fit=crop" alt="{{ favorite.attraction.name }}" class="attraction-image">
+                    {% endif %}
+                {% endif %}
+                
+                <!-- 收藏按鈕（已收藏狀態） -->
+                <button class="favorite-btn favorited" 
+                        onclick="event.stopPropagation(); toggleFavorite({{ favorite.attraction.id }}, this)"
+                        title="取消收藏">
+                    <span class="heart-icon">❤️</span>
+                </button>
+            </div>
+            
+            <div class="attraction-info">
+                <h3 class="attraction-name">{{ favorite.attraction.name }}</h3>
+                <div class="attraction-location">
+                    <span class="location-icon">📍</span>
+                    {{ favorite.attraction.region.name }}・{{ favorite.attraction.address }}
+                </div>
+                <div class="attraction-type-badge">{{ favorite.attraction.attraction_type.name }}</div>
+                <div class="rating">
+                    <span class="stars">⭐⭐⭐⭐⭐</span>
+                    <span class="rating-score">5.0</span>
+                </div>
+                <div class="favorite-date">收藏於 {{ favorite.created_at|date:"Y年m月d日" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">💔</div>
+        <h3>還沒有收藏任何景點</h3>
+        <p>去首頁探索一些精彩的日本景點吧！</p>
+        <a href="{% url 'travel:home' %}" class="explore-btn">開始探索</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* 粉色頂部區塊 */
+.favorites-header {
+    background: linear-gradient(135deg, #ff69b4, #ff8fab);
+    color: white;
+    padding: 60px 0;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.header-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.user-greeting {
+    font-size: 18px;
+    margin-bottom: 20px;
+    opacity: 0.9;
+}
+
+.user-icon {
+    margin-right: 8px;
+}
+
+.favorites-title {
+    font-size: 48px;
+    font-weight: bold;
+    margin: 20px 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.favorites-count {
+    margin: 30px 0;
+}
+
+.count-number {
+    font-size: 72px;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.count-label {
+    font-size: 18px;
+    margin-top: 5px;
+    opacity: 0.9;
+}
+
+.favorites-subtitle {
+    font-size: 20px;
+    margin-top: 20px;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+/* 景點卡片 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.attractions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.attraction-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.attraction-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.attraction-image-container {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+}
+
+.attraction-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.attraction-card:hover .attraction-image {
+    transform: scale(1.05);
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 22px;
+    transition: all 0.3s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-btn:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
+.attraction-info {
+    padding: 25px;
+}
+
+.attraction-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.attraction-location {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.location-icon {
+    margin-right: 6px;
+}
+
+.attraction-type-badge {
+    display: inline-block;
+    background: #ff69b4;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.rating {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.stars {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.rating-score {
+    font-weight: bold;
+    color: #ff8c00;
+    font-size: 16px;
+}
+
+.favorite-date {
+    color: #999;
+    font-size: 14px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* 空狀態 */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.empty-state p {
+    font-size: 18px;
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.explore-btn {
+    display: inline-block;
+    background: #ff69b4;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+}
+
+.explore-btn:hover {
+    background: #e55aa0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+    text-decoration: none;
+    color: white;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .favorites-header {
+        padding: 40px 0;
+    }
     
-    <!-- 加載 JavaScript -->
-    <script src="{% static 'js/main.js' %}"></script>
-</body>
-</html>
+    .favorites-title {
+        font-size: 36px;
+    }
+    
+    .count-number {
+        font-size: 56px;
+    }
+    
+    .attractions-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .attraction-card {
+        margin: 0 10px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFavorite(attractionId, button) {
+    const heartIcon = button.querySelector('.heart-icon');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    
+    if (!csrfToken) {
+        alert('安全驗證失敗，請刷新頁面後重試');
+        return;
+    }
+    
+    fetch('/toggle-favorite/' + attractionId + '/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorited) {
+                button.classList.add('favorited');
+                heartIcon.textContent = '❤️';
+                alert('已加入收藏！');
+            } else {
+                alert('已取消收藏');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        } else {
+            alert('操作失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('網路錯誤，請稍後再試');
+    });
+}
+
+function viewAttractionDetail(attractionId) {
+    window.location.href = '/attraction/' + attractionId + '/';
+}
+</script>
+{% endblock %}

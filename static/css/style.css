@@ -1439,31 +1439,75 @@ body {
 
 .favorite-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    background: rgba(255, 255, 255, 0.95);
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.8);
     border: none;
     border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    font-size: 20px;
+    width: 36px;
+    height: 36px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    font-size: 18px;
+    transition: all 0.2s;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 10;
 }
 
 .favorite-btn:hover {
-    background: rgba(255, 255, 255, 1);
+    background: rgba(255, 255, 255, 0.95);
     transform: scale(1.1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.favorite-btn.favorited {
-    background: rgba(255, 23, 68, 0.1);
-    border: 2px solid #ff1744;
-    color: #ff1744;
+.attraction-image-container {
+    position: relative; /* 確保這個容器是相對定位 */
+}
+
+// 在你的 JavaScript 區塊中加入這個函數
+function toggleFavorite(attractionId, button) {
+    const heartIcon = button.querySelector('.heart-icon');
+    const isFavorited = button.classList.contains('favorited');
+    
+    // 獲取 CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('安全驗證失敗，請刷新頁面後重試');
+        return;
+    }
+    
+    fetch(`/toggle-favorite/${attractionId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorited) {
+                // 加入收藏
+                button.classList.add('favorited');
+                heartIcon.textContent = '❤️';
+                
+                // 愛心跳動動畫
+                button.style.animation = 'heartbeat 0.6s ease-in-out';
+                setTimeout(() => {
+                    button.style.animation = '';
+                }, 600);
+                
+            } else {
+                // 取消收藏
+                button.classList.remove('favorited');
+                heartIcon.textContent = '🤍';
+            }
+        } else {
+            alert('操作失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('網路錯誤，請稍後再試');
+    });
 }

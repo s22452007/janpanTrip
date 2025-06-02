@@ -116,14 +116,27 @@ class Itinerary(models.Model):
         time_str = f" ({self.visit_time.strftime('%H:%M')})" if self.visit_time else ""
         return f"{self.trip.trip_name} - {self.attraction.name} ({self.date}){time_str}"
 
-class FavoriteAttraction(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='使用者')
-    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE, verbose_name='景點')
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        unique_together = ['user', 'attraction']
+        unique_together = ('user', 'attraction')  # 防止重複收藏
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.attraction.name}"
+    
+# 在你的 models.py 中，Favorite 模型已經正確，但需要確保 verbose_name
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    attraction = models.ForeignKey(Attraction, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'attraction')  # 防止重複收藏
         verbose_name = '收藏景點'
         verbose_name_plural = '收藏景點'
     
     def __str__(self):
-        return f"{self.user.username} 收藏 {self.attraction.name}"
+        return f"{self.user.username} - {self.attraction.name}"

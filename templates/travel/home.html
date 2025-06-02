@@ -38,37 +38,36 @@
             <div class="attractions-grid">
                 <!-- 動態加載景點卡片 -->
                 {% for attraction in attractions %}
-                                    <div class="attraction-card">
-                                        <div class="attraction-image-container">  <!-- 新增這個容器 -->
-                    {% if attraction.image %}
+                <div class="attraction-card" onclick="viewAttractionDetail({{ attraction.id }})">
+                    <div class="attraction-image-container">
+                        {% if attraction.image %}
                             <img src="{{ attraction.image.url }}" alt="{{ attraction.name }}" class="attraction-image">
-                    {% else %}
-                        <!-- 根據景點類型顯示不同預設圖片 -->
-                        {% if attraction.attraction_type.name == '寺廟神社' %}
-                            <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
-                        {% elif attraction.attraction_type.name == '現代景點' %}
-                            <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
-                        {% elif attraction.attraction_type.name == '自然風光' %}
-                            <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
-                        {% elif attraction.attraction_type.name == '美食' %}
-                            <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
                         {% else %}
-                            <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            <!-- 根據景點類型顯示不同預設圖片 -->
+                            {% if attraction.attraction_type.name == '寺廟神社' %}
+                                <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            {% elif attraction.attraction_type.name == '現代景點' %}
+                                <img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            {% elif attraction.attraction_type.name == '自然風光' %}
+                                <img src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            {% elif attraction.attraction_type.name == '美食' %}
+                                <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            {% else %}
+                                <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop" alt="{{ attraction.name }}" class="attraction-image">
+                            {% endif %}
                         {% endif %}
-                    {% endif %}
-                     <!-- 新增收藏按鈕 -->
-                    <button class="favorite-btn" 
-                            onclick="toggleFavorite({{ attraction.id }}, this)"
-                            title="收藏景點">
                         
-                    </button>
-                </div>
-
+                        <!-- 收藏按鈕 -->
+                        <button class="favorite-btn" 
+                                onclick="event.stopPropagation(); toggleFavorite({{ attraction.id }}, this)"
+                                title="收藏景點">
+                            <span class="heart-icon">🤍</span>
+                        </button>
+                    </div>
                     
                     <div class="attraction-info">
                         <div class="attraction-name">{{ attraction.name }}</div>
                         <div class="attraction-location">{{ attraction.region.name }}・{{ attraction.address }}</div>
-                        <!-- 移除評分顯示，改為顯示景點類型 -->
                         <div class="attraction-type">{{ attraction.attraction_type.name }}</div>
                         <button class="view-detail-btn" onclick="event.stopPropagation(); viewAttractionDetail({{ attraction.id }})">查看詳情</button>
                     </div>
@@ -248,6 +247,86 @@
     border-radius: 12px;
     display: inline-block;
 }
+
+/* 收藏按鈕樣式 */
+.attraction-image-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.heart-icon {
+    font-size: 20px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* 收藏狀態樣式 */
+.favorite-btn.favorited {
+    background: rgba(255, 23, 68, 0.1);
+    border: 2px solid #ff1744;
+}
+
+.favorite-btn.favorited .heart-icon {
+    color: #ff1744;
+}
+
+/* 愛心跳動動畫 */
+@keyframes heartbeat {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.3);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 確保查看詳情按鈕可以正常點擊 */
+.view-detail-btn {
+    position: relative;
+    z-index: 5;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .favorite-btn {
+        width: 36px;
+        height: 36px;
+        top: 8px;
+        right: 8px;
+    }
+    
+    .heart-icon {
+        font-size: 18px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -265,22 +344,107 @@ function switchTab(tabName) {
     document.getElementById(tabName).classList.add('active');
 }
 
+// 收藏功能
+function toggleFavorite(attractionId, button) {
+    const heartIcon = button.querySelector('.heart-icon');
+    const isFavorited = button.classList.contains('favorited');
+    
+    // 獲取 CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('安全驗證失敗，請刷新頁面後重試');
+        return;
+    }
+    
+    fetch('/toggle-favorite/' + attractionId + '/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorited) {
+                // 加入收藏
+                button.classList.add('favorited');
+                heartIcon.textContent = '❤️';
+                
+                // 顯示提示訊息
+                showMessage('已加入收藏！', 'success');
+                
+                // 愛心跳動動畫
+                button.style.animation = 'heartbeat 0.6s ease-in-out';
+                setTimeout(() => {
+                    button.style.animation = '';
+                }, 600);
+                
+            } else {
+                // 取消收藏
+                button.classList.remove('favorited');
+                heartIcon.textContent = '🤍';
+                
+                // 顯示提示訊息
+                showMessage('已取消收藏', 'info');
+            }
+        } else {
+            alert('操作失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('網路錯誤，請稍後再試');
+    });
+}
+
+// 顯示提示訊息的函數
+function showMessage(message, type) {
+    if (!type) type = 'info';
+    
+    // 創建提示元素
+    const messageDiv = document.createElement('div');
+    const bgColor = type === 'success' ? '#28a745' : '#17a2b8';
+    
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.background = bgColor;
+    messageDiv.style.color = 'white';
+    messageDiv.style.padding = '15px 20px';
+    messageDiv.style.borderRadius = '8px';
+    messageDiv.style.zIndex = '9999';
+    messageDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    messageDiv.style.fontWeight = '500';
+    messageDiv.textContent = message;
+    
+    // 添加到頁面
+    document.body.appendChild(messageDiv);
+    
+    // 3秒後自動移除
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.parentNode.removeChild(messageDiv);
+        }
+    }, 3000);
+}
+
 // 新增的景點詳情查看函數
 function viewAttractionDetail(attractionId) {
     // 跳轉到景點詳情頁面
-    window.location.href = `/attraction/${attractionId}/`;
+    window.location.href = '/attraction/' + attractionId + '/';
 }
 
 // 查看行程函數
 function viewTrip(tripId) {
     console.log('查看行程 ID:', tripId); // 調試用
-    window.location.href = `/trip/view/${tripId}/`;
+    window.location.href = '/trip/view/' + tripId + '/';
 }
 
 // 編輯行程函數
 function editTrip(tripId) {
     console.log('編輯行程 ID:', tripId); // 調試用
-    window.location.href = `/trip/edit/${tripId}/`;
+    window.location.href = '/trip/edit/' + tripId + '/';
 }
 
 // 刪除行程函數
@@ -293,7 +457,7 @@ function deleteTrip(tripId) {
             return;
         }
         
-        fetch(`/trip/delete/${tripId}/`, {
+        fetch('/trip/delete/' + tripId + '/', {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': csrfToken.value,
@@ -321,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const attractionId = this.getAttribute('data-attraction-id');
-            fetch(`/add-to-plan/${attractionId}/`, {
+            fetch('/add-to-plan/' + attractionId + '/', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',

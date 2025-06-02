@@ -796,12 +796,9 @@ function addToItinerary(attractionId) {
 // ========== 收藏功能相關函數 ==========
 
 // 切換收藏狀態
-function toggleFavorite(attractionId, element) {
-    console.log('=== toggleFavorite 開始 ===');
-    console.log('attractionId:', attractionId);
-    
-    // 防止事件冒泡（避免觸發卡片點擊事件）
-    event.stopPropagation();
+function toggleFavorite(attractionId, button) {
+    const heartIcon = button.querySelector('.heart-icon');
+    const isFavorited = button.classList.contains('favorited');
     
     // 獲取 CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');

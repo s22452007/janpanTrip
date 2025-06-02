@@ -19,6 +19,13 @@ urlpatterns = [
     # 景點相關
     path('attraction/<int:attraction_id>/', views.attraction_detail, name='attraction_detail'),
     
+    # 收藏功能 - 新增這些路由
+    path('favorites/', views.favorites_view, name='favorites'),
+    path('toggle-favorite/<int:attraction_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('add-to-favorites/<int:attraction_id>/', views.add_to_favorites_view, name='add_to_favorites'),
+    path('remove-from-favorites/<int:attraction_id>/', views.remove_from_favorites_view, name='remove_from_favorites'),
+    #path('get-user-favorites/', views.get_user_favorites_view, name='get_user_favorites'),
+    
     # 行程管理 API
     path('add-to-plan/<int:attraction_id>/', views.add_to_plan_view, name='add_to_plan'),
     path('search-attractions/', views.search_attractions_view, name='search_attractions'),
@@ -40,12 +47,4 @@ urlpatterns = [
     path('add-to-itinerary/', views.add_to_itinerary_view, name='add_to_itinerary'),
     path('change-attraction-day/', views.change_attraction_day_view, name='change_attraction_day'),
     path('update-attraction-time/', views.update_attraction_time_view, name='update_attraction_time'),
-    
-    # 收藏功能
-    path('favorites/', views.favorites_view, name='favorites'),  # 這個是關鍵！
-    path('toggle-favorite/', views.toggle_favorite, name='toggle_favorite'),
-    path('remove-from-favorites/', views.remove_from_favorites, name='remove_from_favorites'),
-    path('add-to-favorites/<int:attraction_id>/', views.add_to_favorites_view, name='add_to_favorites'),
-    path('remove-from-favorites/<int:attraction_id>/', views.remove_from_favorites_view, name='remove_from_favorites_old'),
-    path('get-user-favorites/', views.get_user_favorites_view, name='get_user_favorites'),
 ]

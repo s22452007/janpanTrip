@@ -7,11 +7,11 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.db.models import Q
-from .models import Attraction, Trip, UserProfile, Region, AttractionType, Itinerary, FavoriteAttraction
+from .models import Attraction, Trip, UserProfile, Region, AttractionType, Itinerary, Favorite
 from datetime import datetime, date, time
 from datetime import timedelta
 import json
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 
 def login_view(request):
@@ -339,7 +339,7 @@ def add_to_favorites_view(request, attraction_id):
     if request.method == 'POST':
         try:
             attraction = get_object_or_404(Attraction, id=attraction_id)
-            favorite, created = FavoriteAttraction.objects.get_or_create(
+            favorite, created = Favorite.objects.get_or_create(
                 user=request.user,
                 attraction=attraction
             )
@@ -368,7 +368,7 @@ def remove_from_favorites_view(request, attraction_id):
         try:
             attraction = get_object_or_404(Attraction, id=attraction_id)
             favorite = get_object_or_404(
-                FavoriteAttraction,
+                Favorite,
                 user=request.user,
                 attraction=attraction
             )
@@ -387,21 +387,19 @@ def remove_from_favorites_view(request, attraction_id):
     return JsonResponse({'success': False, 'message': '無效的請求'})
 
 @login_required
-def get_user_favorites_view(request):
-    """獲取用戶收藏的景點"""
-    favorites = FavoriteAttraction.objects.filter(user=request.user).select_related('attraction')
-    favorites_data = [
-        {
-            'id': fav.attraction.id,
-            'name': fav.attraction.name,
-            'location': f"{fav.attraction.region.name}・{fav.attraction.address}",
-            # 移除評分相關欄位
-            'image': fav.attraction.image.url if fav.attraction.image else '/static/images/default-attraction.jpg'
-        }
-        for fav in favorites
-    ]
+def favorites_view(request):
+    # 獲取用戶的所有收藏，包含相關的景點資料
+    favorites = Favorite.objects.filter(user=request.user).select_related('attraction')
     
-    return JsonResponse({'success': True, 'favorites': favorites_data})
+    # 調試：打印收藏數量
+    print(f"用戶 {request.user.username} 的收藏數量: {favorites.count()}")
+    for fav in favorites:
+        print(f"收藏: {fav.attraction.name}")
+    
+    context = {
+        'favorites': favorites,
+    }
+    return render(request, 'travel/favorites.html', context)
 
 def card_view(request):
     return render(request, 'travel/card.html')
@@ -876,51 +874,76 @@ def public_trip_view(request, trip_id):
             'error_message': '找不到指定的行程，可能已被刪除或設為私人。'
         })
 
+@require_POST
 @login_required
-@require_http_methods(["POST"])
-def toggle_favorite(request):
-    """切換景點收藏狀態"""
+def toggle_favorite(request, attraction_id):
     try:
-        data = json.loads(request.body)
-        attraction_id = data.get('attraction_id')
-        
-        if not attraction_id:
-            return JsonResponse({
-                'success': False,
-                'message': '缺少景點ID'
-            })
-        
         attraction = get_object_or_404(Attraction, id=attraction_id)
-        
-        # 檢查是否已收藏
-        favorite, created = FavoriteAttraction.objects.get_or_create(
+        favorite, created = Favorite.objects.get_or_create(
             user=request.user,
             attraction=attraction
         )
         
-        if created:
-            # 新建收藏
-            is_favorite = True
-            message = '已加入收藏'
-        else:
-            # 取消收藏
+        if not created:
+            # 如果已存在就刪除（取消收藏）
             favorite.delete()
-            is_favorite = False
-            message = '已取消收藏'
-        
+            is_favorited = False
+        else:
+            # 如果不存在就是新增收藏
+            is_favorited = True
+            
         return JsonResponse({
             'success': True,
-            'is_favorite': is_favorite,
-            'message': message
+            'is_favorited': is_favorited
         })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'message': '無效的請求格式'
-        })
+    except Attraction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': '景點不存在'})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        })
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# 修正 favorites_view
+@login_required
+def favorites_view(request):
+    favorites = request.user.favorites.all()
+    context = {
+        'favorites': favorites,
+    }
+    return render(request, 'travel/favorites.html', context)
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def favorites_view(request):
+    context = {}
+    return render(request, 'travel/favorites.html', context)
+
+# 在你的 travel/views.py 中，找到現有的 favorites_view 函數
+# 將整個函數（從 @login_required 到 return render 那一段）完全替換為以下內容：
+
+@login_required
+def favorites_view(request):
+    """收藏頁面視圖"""
+    # 獲取用戶的所有收藏，並包含相關的景點資料
+    favorites = Favorite.objects.filter(user=request.user).select_related(
+        'attraction', 
+        'attraction__region', 
+        'attraction__attraction_type'
+    )
+    
+    # 調試輸出 - 這會出現在終端中
+    print(f"=== 收藏頁面調試 ===")
+    print(f"當前用戶: {request.user.username}")
+    print(f"用戶 ID: {request.user.id}")
+    print(f"查詢到的收藏數量: {favorites.count()}")
+    
+    # 列出所有收藏的景點
+    for i, fav in enumerate(favorites, 1):
+        print(f"收藏 {i}: {fav.attraction.name} (景點ID: {fav.attraction.id}, 收藏時間: {fav.created_at})")
+    
+    print(f"傳遞給模板的收藏數量: {len(list(favorites))}")
+    print(f"================")
+    
+    context = {
+        'favorites': favorites,
+    }
+    return render(request, 'travel/favorites.html', context)

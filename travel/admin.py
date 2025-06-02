@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Region, AttractionType, Attraction, Trip, Itinerary, FavoriteAttraction
+from .models import UserProfile, Region, AttractionType, Attraction, Trip, Itinerary, Favorite
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -65,7 +65,7 @@ class ItineraryAdmin(admin.ModelAdmin):
         }),
     )
 
-@admin.register(FavoriteAttraction)
+@admin.register(Favorite)
 class FavoriteAttractionAdmin(admin.ModelAdmin):
     list_display = ['user', 'attraction']
     list_filter = ['attraction__region', 'attraction__attraction_type']

@@ -119,15 +119,16 @@
         <div id="profile" class="tab-content">
             <div class="section-title">用戶管理</div>
             
-            <form method="post" enctype="multipart/form-data" class="profile-form-container">
-                {% csrf_token %}
+            <div id="profile-form-container" class="profile-form-container">
+                {% csrf_token %} {# 保持這個，JavaScript 會從這裡獲取 CSRF token #}
+                
                 <div class="user-profile">
                     <div class="profile-avatar">
                         <div class="avatar-circle">
                             {% if user.userprofile.avatar %}
-                                <img src="{{ user.userprofile.avatar.url }}" alt="用戶頭像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                <img id="avatar-preview" src="{{ user.userprofile.avatar.url }}" alt="用戶頭像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                             {% else %}
-                                {{ user.username|first|upper }}
+                                <img id="avatar-preview" src="/static/travel/images/default_avatar.png" alt="預設頭像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                             {% endif %}
                         </div>
                         <input type="file" id="avatar-upload" name="avatar" accept="image/*" style="display: none;">
@@ -137,46 +138,185 @@
                     <div class="profile-form">
                         <div class="form-group">
                             <label class="form-label">姓名</label>
-                            <input type="text" name="full_name" class="form-input" value="{{ user.get_full_name }}" placeholder="請輸入姓名">
+                            <input type="text" id="full_name" name="full_name" class="form-input" value="{{ user.get_full_name|default:'' }}" placeholder="請輸入姓名">
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">電子郵件</label>
-                            <input type="email" name="email" class="form-input" value="{{ user.email }}" placeholder="請輸入電子郵件">
+                            <input type="email" id="email" name="email" class="form-input" value="{{ user.email|default:'' }}" placeholder="請輸入電子郵件">
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">手機號碼</label>
-                            <input type="tel" name="phone" class="form-input" value="{% if user.userprofile %}{{ user.userprofile.phone }}{% endif %}" placeholder="請輸入手機號碼">
+                            <input type="tel" id="phone" name="phone" class="form-input" value="{{ user.userprofile.phone|default:'' }}" placeholder="請輸入手機號碼">
                         </div>
                     </div>
                 </div>
-
-                <div class="preferences-section">
-                    <div class="preferences-title">旅行偏好設置</div>
-                    <div class="preferences-form">
-                        <div class="form-group">
-                            <label class="form-label">喜好的旅遊類型</label>
-                            <select name="travel_type" class="form-input">
-                                <option value="culture">文化體驗</option>
-                                <option value="nature">自然風光</option>
-                                <option value="food">美食探索</option>
-                                <option value="shopping">購物娛樂</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">旅行預算範圍</label>
-                            <select name="budget_range" class="form-input">
-                                <option value="budget">經濟型</option>
-                                <option value="mid">中等型</option>
-                                <option value="luxury">高端型</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="save-btn">保存變更</button>
                 </div>
-            </form>
+        
+            <div id="messages-container" style="margin-top: 10px; font-weight: bold; padding: 5px; border-radius: 3px;"></div>
+        
+        </div> {# 結束用戶管理頁面的 tab-content div #}
+        
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // 獲取所有需要的 DOM 元素
+                const fullNameInput = document.getElementById('full_name');
+                const emailInput = document.getElementById('email');
+                const phoneInput = document.getElementById('phone');
+                const avatarUploadInput = document.getElementById('avatar-upload'); // 注意這裡的 ID 與 HTML 匹配
+                const avatarPreview = document.getElementById('avatar-preview');
+                const messagesContainer = document.getElementById('messages-container');
+        
+                // 函數：獲取 CSRF token (Django 的安全機制)
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                const csrftoken = getCookie('csrftoken');
+        
+                // 函數：發送 AJAX 請求到後端
+                function sendProfileUpdate(data) {
+                    const formData = new FormData(); // FormData 可以處理文件和文本數據
+                    // 將傳入的數據添加到 FormData 中
+                    for (const key in data) {
+                        formData.append(key, data[key]);
+                    }
+        
+                    fetch('{% url "travel:profile" %}', {
+                        method: 'POST', // 必須是 POST 請求
+                        headers: {
+                            'X-CSRFToken': csrftoken, // 在請求頭中包含 CSRF token
+                        },
+                        body: formData, // 將 FormData 作為請求體發送
+                    })
+                    .then(response => {
+                        // 檢查響應狀態碼，如果不是 2xx，則拋出錯誤
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json(); // 解析 JSON 響應
+                    })
+                    .then(data => {
+                        // 根據後端返回的 success 狀態顯示訊息
+                        if (data.success) {
+                            messagesContainer.style.color = 'green';
+                            messagesContainer.textContent = data.message;
+                        } else {
+                            messagesContainer.style.color = 'red';
+                            messagesContainer.textContent = data.message;
+                        }
+                        // 消息顯示一段時間後消失
+                        setTimeout(() => {
+                            messagesContainer.textContent = '';
+                        }, 3000); // 3 秒後清空消息
+                    })
+                    .catch(error => {
+                        // 處理網路錯誤或 JSON 解析錯誤
+                        console.error('Error during profile update:', error); // 在控制台打印詳細錯誤
+                        messagesContainer.style.color = 'red';
+                        messagesContainer.textContent = '發生未知錯誤，請檢查瀏覽器控制台。';
+                        setTimeout(() => {
+                            messagesContainer.textContent = '';
+                        }, 5000); // 5 秒後清空消息
+                    });
+                }
+        
+                // 函數：用於減少頻繁觸發保存 (例如，用戶快速輸入時不每個字都保存)
+                // 這會創建一個延遲，只在用戶停止輸入一段時間後才觸發保存
+                let debounceTimeout;
+                const debounce = (func, delay) => {
+                    return function(...args) {
+                        clearTimeout(debounceTimeout);
+                        debounceTimeout = setTimeout(() => func.apply(this, args), delay);
+                    };
+                };
+        
+                // 監聽文字輸入框的變化 (使用 debounce)
+                const handleTextInputChange = debounce(() => {
+                    const data = {
+                        full_name: fullNameInput.value,
+                        email: emailInput.value,
+                        phone: phoneInput.value,
+                    };
+                    sendProfileUpdate(data);
+                }, 800); // 在用戶停止輸入 800 毫秒後觸發保存
+        
+                fullNameInput.addEventListener('input', handleTextInputChange);
+                emailInput.addEventListener('input', handleTextInputChange);
+                phoneInput.addEventListener('input', handleTextInputChange);
+        
+                // 監聽文件輸入框的變化 (用於頭像上傳)
+                avatarUploadInput.addEventListener('change', function() { // 注意這裡使用的是 avatarUploadInput
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        const reader = new FileReader();
+        
+                        // 圖片預覽功能：當選擇新圖片時，立即顯示在頁面上
+                        reader.onload = function(e) {
+                            avatarPreview.src = e.target.result; 
+                        };
+                        reader.readAsDataURL(file); // 讀取文件內容作為 Data URL
+        
+                        // 準備 FormData 發送文件和其他文本數據
+                        const formData = new FormData();
+                        formData.append('avatar', file); 
+                        // 為了確保同時保存其他文本數據，也將它們一併添加到 FormData
+                        formData.append('full_name', fullNameInput.value); 
+                        formData.append('email', emailInput.value);
+                        formData.append('phone', phoneInput.value);
+        
+                        // 發送包含文件和文本數據的 AJAX 請求
+                        fetch('{% url "travel:profile" %}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrftoken,
+                            },
+                            body: formData, 
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                messagesContainer.style.color = 'green';
+                                messagesContainer.textContent = data.message;
+                            } else {
+                                messagesContainer.style.color = 'red';
+                                messagesContainer.textContent = data.message;
+                            }
+                            setTimeout(() => {
+                                messagesContainer.textContent = '';
+                            }, 3000);
+                        })
+                        .catch(error => {
+                            console.error('Error during avatar update:', error);
+                            messagesContainer.style.color = 'red';
+                            messagesContainer.textContent = '頭像上傳失敗，請檢查瀏覽器控制台。';
+                            setTimeout(() => {
+                                messagesContainer.textContent = '';
+                            }, 5000);
+                        });
+                    }
+                });
+            });
+        </script>
+            
+            
 
             <div class="section-title">行程收藏與歷史記錄</div>
             

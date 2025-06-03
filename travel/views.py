@@ -100,28 +100,45 @@ def home_view(request):
     return render(request, 'travel/home.html', context)
 
 @login_required
+@csrf_exempt # <-- 確保有這個
 def profile_view(request):
-    if request.method == 'POST':
-        # 處理個人資料更新
-        user = request.user
-        user.first_name = request.POST.get('first_name', '')
-        user.last_name = request.POST.get('last_name', '')
-        user.email = request.POST.get('email', '')
-        user.save()
-        
-        # 處理用戶偏好設置
-        profile, created = UserProfile.objects.get_or_create(user=user)
-        profile.phone = request.POST.get('phone', '')
-        profile.email = request.POST.get('email', '')  # 更新 UserProfile 的 email
-        
-        if 'avatar' in request.FILES:
-            profile.avatar = request.FILES['avatar']
-        
-        profile.save()
-        messages.success(request, '個人資料已更新')
-        
-    return render(request, 'travel/profile.html')
+    user_profile, created = UserProfile.objects.get_or_create(user=request.user)
 
+    if request.method == 'POST':
+        full_name = request.POST.get('full_name', '')
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+
+        name_parts = full_name.split(' ', 1)
+        request.user.first_name = name_parts[0]
+        request.user.last_name = name_parts[1] if len(name_parts) > 1 else ''
+        request.user.email = email
+
+        # 使用 try-except 塊來捕獲保存時可能發生的錯誤
+        try:
+            request.user.save() # 保存 Django User 模型的更改
+
+            user_profile.phone = phone
+            if 'avatar' in request.FILES:
+                user_profile.avatar = request.FILES['avatar']
+
+            user_profile.save() # 保存 UserProfile 模型的更改
+
+            # messages.success(request, '個人資料已成功更新！') # 這行可以保留，但對於 AJAX 響應，前端會直接使用 JSON 消息
+            return JsonResponse({'success': True, 'message': '個人資料已成功更新！'}) # <--- 就是這一行！
+
+        except Exception as e:
+            # 如果保存過程中發生錯誤，返回 JSON 錯誤響應
+            print(f"Error saving profile: {e}") # 打印到終端機以供調試
+            return JsonResponse({'success': False, 'message': f'更新失敗：{str(e)}'}, status=400)
+
+    else: # GET 請求時的處理
+        context = {
+            'user_profile': user_profile,
+            'attractions': Attraction.objects.all(),
+            'user_trips': Trip.objects.filter(user=request.user).annotate(total_attractions=models.Count('itinerary')).order_by('-start_date'),
+        }
+        return render(request, 'travel/home.html', context)
 @login_required
 def add_to_plan_view(request, attraction_id):
     if request.method == 'POST':

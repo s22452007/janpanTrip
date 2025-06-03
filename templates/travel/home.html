@@ -152,11 +152,53 @@
                         </div>
                     </div>
                 </div>
-                </div>
+            </div>
         
             <div id="messages-container" style="margin-top: 10px; font-weight: bold; padding: 5px; border-radius: 3px;"></div>
-        
-        </div> {# 結束用戶管理頁面的 tab-content div #}
+            
+            <div class="section-title">最近行程</div>
+
+            <!-- 最近的行程 - 使用真實資料 -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #333; margin-bottom: 15px;">
+                    最近的行程
+                    {% if user_trips %}
+                        <a href="{% url 'travel:my_trips' %}" style="float: right; color: #ff69b4; text-decoration: none; font-size: 14px;">查看全部 →</a>
+                    {% endif %}
+                </h3>
+                <div class="itinerary-history">
+                    {% if user_trips %}
+                        {% for trip in user_trips %}
+                        <div class="history-card">
+                            <div class="history-title">{{ trip.trip_name }}</div>
+                            <div class="history-date">
+                                {{ trip.start_date|date:"Y/m/d" }}
+                                {% if trip.end_date != trip.start_date %}
+                                    - {{ trip.end_date|date:"Y/m/d" }}
+                                {% endif %}
+                            </div>
+                            <div class="trip-attractions-count" style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                                已安排 {{ trip.total_attractions|default:0 }} 個景點
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="view-details-btn" onclick="viewTrip({{ trip.id }})">查看詳情</button>
+                                <button class="view-details-btn" onclick="editTrip({{ trip.id }})" style="background: #28a745;">編輯</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="text-align: center; padding: 40px; color: #666; background: white; border-radius: 8px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">✈️</div>
+                            <p>您還沒有建立任何行程</p>
+                            <p style="font-size: 14px; color: #999;">開始規劃您的第一個日本之旅吧！</p>
+                            <a href="{% url 'travel:create_trip' %}" class="view-details-btn" style="margin-top: 15px; display: inline-block; text-decoration: none;">建立行程</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         
         
         <script>
@@ -315,68 +357,8 @@
                 });
             });
         </script>
-            
-            
-
-            <div class="section-title">行程收藏與歷史記錄</div>
-            
-            <div style="margin-bottom: 30px;">
-                <h3 style="color: #333; margin-bottom: 15px;">最近的行程</h3>
-                <div class="itinerary-history">
-                    <div class="history-card">
-                        <div class="history-title">東京五日遊</div>
-                        <div class="history-date">2024/04/05</div>
-                        <button class="view-details-btn">查看詳情</button>
-                    </div>
-                    
-                    <div class="history-card">
-                        <div class="history-title">關西櫻花之旅</div>
-                        <div class="history-date">2023/11/19</div>
-                        <button class="view-details-btn">查看詳情</button>
-                    </div>
-                    
-                    <div class="history-card">
-                        <div class="history-title">北海道雪季</div>
-                        <div class="history-date">2023/01/20-2023/01/28</div>
-                        <button class="view-details-btn">查看詳情</button>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h3 style="color: #333; margin-bottom: 15px;">收藏的景點</h3>
-                <div class="favorites-grid">
-                    <div class="favorite-card">
-                        <div class="favorite-title">京都古蹟三日遊</div>
-                        <div class="favorite-author">作者：旅遊達人小林</div>
-                        <div class="favorite-stats">
-                            <button class="view-details-btn">查看詳情</button>
-                        </div>
-                    </div>
-                    
-                    <div class="favorite-card">
-                        <div class="favorite-title">大阪美食地圖</div>
-                        <div class="favorite-author">作者：美食探險家大田</div>
-                        <div class="favorite-stats">
-                            <button class="view-details-btn">查看詳情</button>
-                        </div>
-                    </div>
-                    
-                    <div class="favorite-card">
-                        <div class="favorite-title">東京購物漫遊之旅</div>
-                        <div class="favorite-author">作者：購物達人宅女</div>
-                        <div class="favorite-stats">
-                            <button class="view-details-btn">查看詳情</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style>
-
     .no-attractions {
     grid-column: 1 / -1;
     text-align: center;
@@ -826,6 +808,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // 檢查 URL 參數，如果有 tab=profile 就切換到用戶管理頁籤
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab === 'profile') {
+        switchTab('profile');
+    }
 });
 </script>
 {% endblock %}

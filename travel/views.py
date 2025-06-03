@@ -87,13 +87,20 @@ def home_view(request):
     attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
     
     # 獲取用戶行程並計算景點數量
-    user_trips = Trip.objects.filter(user=request.user)[:5]  # 顯示前5個行程
+    user_trips = Trip.objects.filter(user=request.user).order_by('-start_date')[:5]  # 顯示前5個行程，按時間排序
     
     # 為每個行程添加景點數量（使用新的 Itinerary 模型）
     for trip in user_trips:
         trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
-        # 新增：獲取地區和景點類型用於搜尋下拉選單
+    # 獲取用戶的最近收藏景點（前5個）
+    user_favorites = Favorite.objects.filter(user=request.user).select_related(
+        'attraction', 
+        'attraction__region', 
+        'attraction__attraction_type'
+    ).order_by('-created_at')[:5]
+    
+    # 新增：獲取地區和景點類型用於搜尋下拉選單
     regions = Region.objects.all().order_by('name')
     attraction_types = AttractionType.objects.all().order_by('name')
     
@@ -101,6 +108,7 @@ def home_view(request):
     context = {
         'attractions': attractions,
         'user_trips': user_trips,
+        'user_favorites': user_favorites,  # 新增收藏資料
         'regions': regions,
         'attraction_types': attraction_types,
     }
@@ -140,12 +148,9 @@ def profile_view(request):
             return JsonResponse({'success': False, 'message': f'更新失敗：{str(e)}'}, status=400)
 
     else: # GET 請求時的處理
-        context = {
-            'user_profile': user_profile,
-            'attractions': Attraction.objects.all(),
-            'user_trips': Trip.objects.filter(user=request.user).annotate(total_attractions=models.Count('itinerary')).order_by('-start_date'),
-        }
-        return render(request, 'travel/home.html', context)
+        # 重定向到首頁
+        return redirect('travel:home')
+
 @login_required
 def add_to_plan_view(request, attraction_id):
     if request.method == 'POST':
@@ -412,13 +417,26 @@ def remove_from_favorites_view(request, attraction_id):
 
 @login_required
 def favorites_view(request):
-    # 獲取用戶的所有收藏，包含相關的景點資料
-    favorites = Favorite.objects.filter(user=request.user).select_related('attraction')
+    """收藏頁面視圖"""
+    # 獲取用戶的所有收藏，並包含相關的景點資料
+    favorites = Favorite.objects.filter(user=request.user).select_related(
+        'attraction', 
+        'attraction__region', 
+        'attraction__attraction_type'
+    )
     
-    # 調試：打印收藏數量
-    print(f"用戶 {request.user.username} 的收藏數量: {favorites.count()}")
-    for fav in favorites:
-        print(f"收藏: {fav.attraction.name}")
+    # 調試輸出 - 這會出現在終端中
+    print(f"=== 收藏頁面調試 ===")
+    print(f"當前用戶: {request.user.username}")
+    print(f"用戶 ID: {request.user.id}")
+    print(f"查詢到的收藏數量: {favorites.count()}")
+    
+    # 列出所有收藏的景點
+    for i, fav in enumerate(favorites, 1):
+        print(f"收藏 {i}: {fav.attraction.name} (景點ID: {fav.attraction.id}, 收藏時間: {fav.created_at})")
+    
+    print(f"傳遞給模板的收藏數量: {len(list(favorites))}")
+    print(f"================")
     
     context = {
         'favorites': favorites,
@@ -925,53 +943,6 @@ def toggle_favorite(request, attraction_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# 修正 favorites_view
-@login_required
-def favorites_view(request):
-    favorites = request.user.favorites.all()
-    context = {
-        'favorites': favorites,
-    }
-    return render(request, 'travel/favorites.html', context)
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-
-@login_required
-def favorites_view(request):
-    context = {}
-    return render(request, 'travel/favorites.html', context)
-
-# 在你的 travel/views.py 中，找到現有的 favorites_view 函數
-# 將整個函數（從 @login_required 到 return render 那一段）完全替換為以下內容：
-
-@login_required
-def favorites_view(request):
-    """收藏頁面視圖"""
-    # 獲取用戶的所有收藏，並包含相關的景點資料
-    favorites = Favorite.objects.filter(user=request.user).select_related(
-        'attraction', 
-        'attraction__region', 
-        'attraction__attraction_type'
-    )
-    
-    # 調試輸出 - 這會出現在終端中
-    print(f"=== 收藏頁面調試 ===")
-    print(f"當前用戶: {request.user.username}")
-    print(f"用戶 ID: {request.user.id}")
-    print(f"查詢到的收藏數量: {favorites.count()}")
-    
-    # 列出所有收藏的景點
-    for i, fav in enumerate(favorites, 1):
-        print(f"收藏 {i}: {fav.attraction.name} (景點ID: {fav.attraction.id}, 收藏時間: {fav.created_at})")
-    
-    print(f"傳遞給模板的收藏數量: {len(list(favorites))}")
-    print(f"================")
-    
-    context = {
-        'favorites': favorites,
-    }
-    return render(request, 'travel/favorites.html', context)
-
 @login_required
 def update_attraction_duration_view(request):
     """更新景點參觀時間（分鐘數）"""
@@ -1023,4 +994,3 @@ def update_attraction_duration_view(request):
             })
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
-

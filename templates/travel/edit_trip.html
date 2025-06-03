@@ -144,9 +144,22 @@
                                                 class="time-input" 
                                                 value="{% if itinerary_item.visit_time %}{{ itinerary_item.visit_time|time:'H:i' }}{% else %}09:00{% endif %}"
                                                 onchange="updateAttractionTime({{ itinerary_item.id }}, this.value)">
+                                               <!-- 新增：參觀時間輸入 -->
+                                            <span>⏱️</span>
+                                            <input type="number" 
+                                                class="duration-input" 
+                                                value="{{ itinerary_item.duration_minutes|default:120 }}"
+                                                min="1"
+                                                max="1440"
+                                                step="15"
+                                                placeholder="分鐘"
+                                                title="參觀時間（分鐘）"
+                                                onchange="updateAttractionDuration({{ itinerary_item.id }}, this.value)">
+                                            <span class="duration-label">分鐘</span> 
                                         </div>
                                     </div>
                                     <div class="item-actions">
+                                        /* 參觀時間輸入框樣式 */
                                         <button class="remove-btn" onclick="removeFromItinerary({{ itinerary_item.id }})">🗑️</button>
                                     </div>
                                 </div>
@@ -173,6 +186,55 @@
 
 <!-- 保持原有的 CSS 樣式 -->
 <style>
+    /* 參觀時間輸入框樣式 */
+.duration-input {
+    width: 60px;
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.duration-input:focus {
+    outline: none;
+    border-color: #ff69b4;
+    box-shadow: 0 0 0 1px rgba(255, 105, 180, 0.2);
+}
+
+.duration-label {
+    font-size: 11px;
+    color: #666;
+    margin-left: 2px;
+}
+
+/* 調整 item-controls 的佈局 */
+.item-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.item-controls span {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .item-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .duration-input {
+        width: 50px;
+    }
+}
 .edit-trip-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -766,6 +828,40 @@ function updateAttractionTime(itineraryId, newTime) {
     })
     .catch(error => {
         console.error('更新時間失敗:', error);
+    });
+}
+
+// 更新景點參觀時間（分鐘數）
+function updateAttractionDuration(itineraryId, newDuration) {
+    // 驗證輸入值
+    const duration = parseInt(newDuration);
+    if (isNaN(duration) || duration < 1 || duration > 1440) {
+        alert('參觀時間必須在 1-1440 分鐘之間');
+        return;
+    }
+    
+    fetch('/update-attraction-duration/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            itinerary_attraction_id: itineraryId,
+            new_duration: duration
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(`參觀時間已更新為 ${duration} 分鐘`, 'success');
+        } else {
+            alert(data.message || '參觀時間更新失敗');
+        }
+    })
+    .catch(error => {
+        console.error('更新參觀時間失敗:', error);
+        alert('更新參觀時間失敗，請稍後再試');
     });
 }
 

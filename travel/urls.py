@@ -46,5 +46,5 @@ urlpatterns = [
     path('search-available-attractions/', views.search_available_attractions_view, name='search_available_attractions'),
     path('add-to-itinerary/', views.add_to_itinerary_view, name='add_to_itinerary'),
     path('change-attraction-day/', views.change_attraction_day_view, name='change_attraction_day'),
-    path('update-attraction-time/', views.update_attraction_time_view, name='update_attraction_time'),
+    path('update-attraction-duration/', views.update_attraction_duration_view, name='update_attraction_duration'),
 ]

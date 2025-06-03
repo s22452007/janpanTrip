@@ -93,15 +93,9 @@ def home_view(request):
     for trip in user_trips:
         trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
-    # 新增：獲取地區和景點類型用於搜尋下拉選單
-    regions = Region.objects.all().order_by('name')
-    attraction_types = AttractionType.objects.all().order_by('name')
-    
     context = {
         'attractions': attractions,
         'user_trips': user_trips,
-        'regions': regions,
-        'attraction_types': attraction_types,
     }
     return render(request, 'travel/home.html', context)
 
@@ -953,55 +947,3 @@ def favorites_view(request):
         'favorites': favorites,
     }
     return render(request, 'travel/favorites.html', context)
-
-@login_required
-def update_attraction_duration_view(request):
-    """更新景點參觀時間（分鐘數）"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            itinerary_id = data.get('itinerary_attraction_id')
-            new_duration = data.get('new_duration')
-            
-            # 驗證參數
-            if not itinerary_id or not new_duration:
-                return JsonResponse({
-                    'success': False, 
-                    'message': '缺少必要參數'
-                })
-            
-            # 驗證參觀時間範圍
-            duration = int(new_duration)
-            if duration < 1 or duration > 1440:
-                return JsonResponse({
-                    'success': False, 
-                    'message': '參觀時間必須在 1-1440 分鐘之間'
-                })
-            
-            itinerary_item = get_object_or_404(
-                Itinerary, 
-                id=itinerary_id,
-                trip__user=request.user
-            )
-            
-            # 更新 duration_minutes 欄位
-            itinerary_item.duration_minutes = duration
-            itinerary_item.save()
-            
-            return JsonResponse({
-                'success': True, 
-                'message': f'參觀時間已更新為 {duration} 分鐘'
-            })
-            
-        except ValueError:
-            return JsonResponse({
-                'success': False, 
-                'message': '無效的時間格式'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False, 
-                'message': f'更新失敗：{str(e)}'
-            })
-    
-    return JsonResponse({'success': False, 'message': '無效的請求'})

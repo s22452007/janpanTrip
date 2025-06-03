@@ -17,23 +17,20 @@
             <div class="search-section">
                 <div class="search-bar">
                     <input type="text" class="search-input" placeholder="搜尋景點...">
-                    
-                    <!-- 動態地區下拉選單 -->
-                    <select class="filter-select" id="region-filter">
-                        <option value="">地區 ▼</option>
-                        {% for region in regions %}
-                            <option value="{{ region.name }}">{{ region.name }}</option>
-                        {% endfor %}
+                    <select class="filter-select">
+                        <option>地區 ▼</option>
+                        <option>東京</option>
+                        <option>大阪</option>
+                        <option>京都</option>
+                        <option>沖繩</option>
                     </select>
-                    
-                    <!-- 動態景點類型下拉選單 -->
-                    <select class="filter-select" id="type-filter">
-                        <option value="">類型 ▼</option>
-                        {% for type in attraction_types %}
-                            <option value="{{ type.name }}">{{ type.name }}</option>
-                        {% endfor %}
+                    <select class="filter-select">
+                        <option>類型 ▼</option>
+                        <option>寺廟神社</option>
+                        <option>現代景點</option>
+                        <option>自然風光</option>
+                        <option>美食</option>
                     </select>
-                    
                     <button class="search-btn">搜尋</button>
                 </div>
             </div>
@@ -239,49 +236,6 @@
 </div>
 
 <style>
-
-.no-attractions {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 40px 20px;
-    color: #666;
-}
-
-.no-attractions p {
-    font-size: 16px;
-    margin-bottom: 10px;
-}
-
-.no-attractions-subtitle {
-    font-size: 14px;
-    color: #999;
-}
-
-/* 搜尋按鈕懸停效果 */
-.search-btn {
-    transition: all 0.3s ease;
-}
-
-.search-btn:hover {
-    background: #e91e63;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
-}
-
-/* 搜尋輸入框焦點效果 */
-.search-input:focus {
-    outline: none;
-    border-color: #ff69b4;
-    box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
-}
-
-/* 下拉選單焦點效果 */
-.filter-select:focus {
-    outline: none;
-    border-color: #ff69b4;
-    box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
-}
-
 /* 為新的景點類型樣式 */
 .attraction-type {
     color: #ff69b4;
@@ -389,145 +343,6 @@ function switchTab(tabName) {
     event.target.classList.add('active');
     document.getElementById(tabName).classList.add('active');
 }
-
-/// 搜尋功能
-function performSearch() {
-    const searchInput = document.querySelector('.search-input');
-    const regionSelect = document.getElementById('region-filter');
-    const typeSelect = document.getElementById('type-filter');
-    
-    const searchQuery = searchInput.value.trim();
-    const region = regionSelect.value;
-    const type = typeSelect.value;
-    
-    console.log('搜尋參數:', { searchQuery, region, type }); // 調試用
-    
-    // 構建查詢參數
-    const params = new URLSearchParams();
-    if (searchQuery) params.append('search', searchQuery);
-    if (region) params.append('region', region);
-    if (type) params.append('type', type);
-    
-    // 發送搜尋請求
-    fetch('/search-attractions/?' + params.toString())
-        .then(response => response.json())
-        .then(data => {
-            console.log('搜尋結果:', data); // 調試用
-            if (data.success) {
-                displaySearchResults(data.attractions);
-            } else {
-                alert('搜尋失敗，請稍後再試');
-            }
-        })
-        .catch(error => {
-            console.error('搜尋錯誤:', error);
-            alert('搜尋時發生錯誤，請稍後再試');
-        });
-}
-
-// 顯示搜尋結果（移除顯示所有景點按鈕）
-function displaySearchResults(attractions) {
-    const attractionsGrid = document.querySelector('.attractions-grid');
-    
-    if (attractions.length === 0) {
-        attractionsGrid.innerHTML = `
-            <div class="no-attractions">
-                <p>沒有找到符合條件的景點</p>
-                <p class="no-attractions-subtitle">請嘗試調整搜尋條件</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // 生成景點卡片 HTML
-    const attractionCards = attractions.map(attraction => `
-        <div class="attraction-card" onclick="viewAttractionDetail(${attraction.id})">
-            <div class="attraction-image-container">
-                <img src="${attraction.image}" alt="${attraction.name}" class="attraction-image">
-                <button class="favorite-btn" 
-                        onclick="event.stopPropagation(); toggleFavorite(${attraction.id}, this)"
-                        title="收藏景點">
-                    <span class="heart-icon">🤍</span>
-                </button>
-            </div>
-            
-            <div class="attraction-info">
-                <div class="attraction-name">${attraction.name}</div>
-                <div class="attraction-location">${attraction.location}</div>
-                <div class="attraction-type">${attraction.type}</div>
-                <button class="view-detail-btn" onclick="event.stopPropagation(); viewAttractionDetail(${attraction.id})">查看詳情</button>
-            </div>
-        </div>
-    `).join('');
-    
-    // 直接顯示搜尋結果，不添加顯示所有景點按鈕
-    attractionsGrid.innerHTML = attractionCards;
-}
-
-// 清除搜尋（可以保留這個函數，用於其他地方調用）
-function clearSearch() {
-    document.querySelector('.search-input').value = '';
-    document.getElementById('region-filter').value = ''; 
-    document.getElementById('type-filter').value = ''; 
-    
-    // 重新載入頁面顯示所有景點
-    window.location.reload();
-}
-
-// 綁定搜尋按鈕事件
-document.addEventListener('DOMContentLoaded', function() {
-    const searchBtn = document.querySelector('.search-btn');
-    const searchInput = document.querySelector('.search-input');
-    
-    // 點擊搜尋按鈕
-    if (searchBtn) {
-        searchBtn.addEventListener('click', performSearch);
-    }
-    
-    // 按 Enter 鍵搜尋
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-    }
-    
-    // 下拉選單變更時自動搜尋 - 使用正確的 ID
-    const regionFilter = document.getElementById('region-filter');
-    const typeFilter = document.getElementById('type-filter');
-    
-    if (regionFilter) {
-        regionFilter.addEventListener('change', performSearch);
-    }
-    if (typeFilter) {
-        typeFilter.addEventListener('change', performSearch);
-    }
-    
-    document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const attractionId = this.getAttribute('data-attraction-id');
-            fetch('/add-to-plan/' + attractionId + '/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.style.background = '#28a745';
-                    this.textContent = '已加入';
-                    setTimeout(() => {
-                        this.style.background = '#ff69b4';
-                        this.textContent = '加入行程';
-                    }, 2000);
-                }
-            });
-        });
-    });
-});
 
 // 收藏功能
 function toggleFavorite(attractionId, button) {

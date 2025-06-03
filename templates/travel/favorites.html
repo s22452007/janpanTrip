@@ -3,6 +3,9 @@
 {% block title %}我的收藏 - 日本旅遊規劃{% endblock %}
 
 {% block content %}
+<!-- 隱藏的 CSRF token，讓 JavaScript 可以使用 -->
+{% csrf_token %}
+
 <!-- 粉色頂部區塊 -->
 <div class="favorites-header">
     <div class="header-content">
@@ -31,7 +34,7 @@
     {% if favorites and favorites|length > 0 %}
     <div class="attractions-grid">
         {% for favorite in favorites %}
-        <div class="attraction-card" onclick="viewAttractionDetail({{ favorite.attraction.id }})">
+        <div class="attraction-card" id="favorite-card-{{ favorite.attraction.id }}" onclick="viewAttractionDetail({{ favorite.attraction.id }})">
             <div class="attraction-image-container">
                 {% if favorite.attraction.image %}
                     <img src="{{ favorite.attraction.image.url }}" alt="{{ favorite.attraction.name }}" class="attraction-image">
@@ -52,7 +55,7 @@
                 
                 <!-- 收藏按鈕（已收藏狀態） -->
                 <button class="favorite-btn favorited" 
-                        onclick="event.stopPropagation(); toggleFavorite({{ favorite.attraction.id }}, this)"
+                        onclick="event.stopPropagation(); removeFavorite({{ favorite.attraction.id }}, this)"
                         title="取消收藏">
                     <span class="heart-icon">❤️</span>
                 </button>
@@ -87,7 +90,7 @@
 <style>
 /* 粉色頂部區塊 */
 .favorites-header {
-    background: linear-gradient(135deg, #ff69b4, #ff8fab);
+    background: linear-gradient(#ff69b4);
     color: white;
     padding: 60px 0;
     text-align: center;
@@ -190,7 +193,7 @@
     position: absolute;
     top: 15px;
     right: 15px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 23, 68, 0.1);
     border: none;
     border-radius: 50%;
     width: 45px;
@@ -208,6 +211,11 @@
 .favorite-btn:hover {
     background: white;
     transform: scale(1.1);
+}
+
+.favorite-btn.favorited {
+    background: rgba(255, 23, 68, 0.1);
+    border: 2px solid #ff1744;
 }
 
 .attraction-info {
@@ -315,6 +323,13 @@
     color: white;
 }
 
+/* 卡片移除動畫 */
+.card-removing {
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: all 0.5s ease;
+}
+
 /* 響應式設計 */
 @media (max-width: 768px) {
     .favorites-header {
@@ -343,14 +358,23 @@
 
 {% block extra_js %}
 <script>
-function toggleFavorite(attractionId, button) {
+// 移除收藏功能（專門用於收藏頁面）
+function removeFavorite(attractionId, button) {
     const heartIcon = button.querySelector('.heart-icon');
+    const card = button.closest('.attraction-card');
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
     
     if (!csrfToken) {
         alert('安全驗證失敗，請刷新頁面後重試');
         return;
     }
+    
+    // 確認是否要取消收藏
+    if (!confirm('確定要取消收藏這個景點嗎？')) {
+        return;
+    }
+    
+    console.log('取消收藏景點 ID:', attractionId);
     
     fetch('/toggle-favorite/' + attractionId + '/', {
         method: 'POST',
@@ -361,29 +385,105 @@ function toggleFavorite(attractionId, button) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('取消收藏回應:', data);
+        
         if (data.success) {
-            if (data.is_favorited) {
-                button.classList.add('favorited');
-                heartIcon.textContent = '❤️';
-                alert('已加入收藏！');
-            } else {
-                alert('已取消收藏');
+            if (!data.is_favorited) {
+                // 取消收藏成功
+                showSuccessMessage('已取消收藏');
+                
+                // 添加移除動畫
+                card.classList.add('card-removing');
+                
+                // 動畫完成後移除卡片並更新計數
                 setTimeout(() => {
-                    location.reload();
-                }, 1000);
+                    card.remove();
+                    updateFavoritesCount();
+                    
+                    // 檢查是否還有收藏，如果沒有就重新載入頁面顯示空狀態
+                    const remainingCards = document.querySelectorAll('.attraction-card').length;
+                    if (remainingCards === 0) {
+                        location.reload();
+                    }
+                }, 500);
+                
+            } else {
+                // 如果意外地變成收藏了，也處理一下
+                showSuccessMessage('景點已重新加入收藏');
             }
         } else {
             alert('操作失敗：' + (data.error || '未知錯誤'));
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('取消收藏錯誤:', error);
         alert('網路錯誤，請稍後再試');
     });
 }
 
+// 更新收藏數量顯示
+function updateFavoritesCount() {
+    const countElement = document.querySelector('.count-number');
+    const subtitleElement = document.querySelector('.favorites-subtitle');
+    const remainingCards = document.querySelectorAll('.attraction-card').length;
+    
+    if (countElement) {
+        countElement.textContent = remainingCards;
+    }
+    
+    if (subtitleElement) {
+        if (remainingCards > 0) {
+            subtitleElement.textContent = `您已收藏了 ${remainingCards} 個精彩景點，開始規劃您的旅程吧！`;
+        } else {
+            subtitleElement.textContent = '還沒有收藏任何景點，去發現一些美麗的地方吧！';
+        }
+    }
+}
+
+// 顯示成功提示
+function showSuccessMessage(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        z-index: 9999;
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.3);
+        font-weight: 500;
+        font-size: 16px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    messageDiv.textContent = message;
+    
+    document.body.appendChild(messageDiv);
+    
+    // 3秒後移除
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }, 300);
+        }
+    }, 3000);
+}
+
+// 查看景點詳情
 function viewAttractionDetail(attractionId) {
     window.location.href = '/attraction/' + attractionId + '/';
 }
+
+// 頁面載入完成後的初始化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('收藏頁面載入完成');
+    
+    // 為所有收藏按鈕添加樣式
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    console.log('找到收藏按鈕數量:', favoriteButtons.length);
+});
 </script>
 {% endblock %}

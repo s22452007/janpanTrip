@@ -1218,7 +1218,7 @@ function addToTripFromModal(attractionId) {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 23, 68, 0.1);
     border: none;
     border-radius: 50%;
     width: 35px;
@@ -1232,7 +1232,7 @@ function addToTripFromModal(attractionId) {
 }
 
 .favorite-btn:hover {
-    background: rgba(255, 255, 255, 1);
+    background: rgba(255, 23, 68, 0.1);
     transform: scale(1.1);
 }
 

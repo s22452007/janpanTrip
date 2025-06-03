@@ -1,0 +1,42 @@
+# Python
+*.pyc
+__pycache__/
+*.pyd
+*.pyo
+.Python
+env/
+venv/
+lib/
+include/
+bin/
+share/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.poetry/
+.venv/
+build/
+dist/
+*.egg-info/
+.coverage
+.pytest_cache/
+htmlcov/
+.mypy_cache/
+
+# Django specific
+*.log
+*.pot
+media/ # User uploaded media files
+db.sqlite3 # SQLite database file
+
+# IDEs and other tools
+.idea/             # PyCharm project files
+.vscode/           # VS Code settings
+.DS_Store          # macOS specific
+.env               # Environment variables
+*.sublime-project
+*.sublime-workspace
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/

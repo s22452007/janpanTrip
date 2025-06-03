@@ -1274,12 +1274,11 @@ body {
 }
 
 .create-trip-btn:hover {
-    background: linear-gradient(135deg, #e55aa0, #ff7a95);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+    background: #747d85;
     color: white;
-    text-decoration: none;
+    border: 2px solid #747d85;
 }
+
 
 .btn-icon {
     font-size: 20px;

@@ -994,3 +994,152 @@ def update_attraction_duration_view(request):
             })
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
+
+# 在你的 views.py 中添加這個新視圖
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+
+# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
+
+# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
+
+# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
+
+@login_required
+@require_POST
+def get_favorite_status(request):
+    """獲取多個景點的收藏狀態"""
+    try:
+        data = json.loads(request.body)
+        attraction_ids = data.get('attraction_ids', [])
+        
+        if not attraction_ids:
+            return JsonResponse({
+                'success': False,
+                'error': '沒有提供景點ID'
+            })
+        
+        # 使用你現有的 Favorite 模型
+        user_favorites = Favorite.objects.filter(
+            user=request.user,
+            attraction_id__in=attraction_ids
+        ).values_list('attraction_id', flat=True)
+        
+        # 建立返回的數據結構
+        favorites = {}
+        for attraction_id in attraction_ids:
+            favorites[attraction_id] = attraction_id in user_favorites
+        
+        return JsonResponse({
+            'success': True,
+            'favorites': favorites
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': '無效的JSON數據'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+# 同時更新 search_attractions_view 函數，使其在搜尋結果中包含收藏狀態
+def search_attractions_view(request):
+    search_query = request.GET.get('search', '')
+    region = request.GET.get('region', '')
+    attraction_type = request.GET.get('type', '')
+    
+    # 建立查詢
+    attractions = Attraction.objects.all()
+    
+    if search_query:
+        attractions = attractions.filter(
+            Q(name__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    if region and region != '地區 ▼':
+        attractions = attractions.filter(region__name=region)
+    
+    if attraction_type and attraction_type != '類型 ▼':
+        attractions = attractions.filter(attraction_type__name=attraction_type)
+    
+    # 預設圖片映射
+    default_images = {
+        '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
+        '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
+        '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
+        '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
+        '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop'
+    }
+    
+    # 如果用戶已登入，獲取收藏狀態
+    user_favorites = set()
+    if request.user.is_authenticated:
+        user_favorites = set(
+            Favorite.objects.filter(
+                user=request.user,
+                attraction__in=attractions
+            ).values_list('attraction_id', flat=True)
+        )
+    
+    attractions_data = []
+    for attr in attractions[:20]:  # 限制返回20個結果
+        attractions_data.append({
+            'id': attr.id,
+            'name': attr.name,
+            'location': f"{attr.region.name}・{attr.address}",
+            'type': attr.attraction_type.name,
+            'image': attr.image.url if attr.image else default_images.get(
+                attr.attraction_type.name, 
+                'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop'
+            ),
+            'is_favorited': attr.id in user_favorites  # 添加收藏狀態
+        })
+    
+    return JsonResponse({'success': True, 'attractions': attractions_data})
+
+# 同時更新 home_view，在初始加載時也包含收藏狀態
+@login_required
+def home_view(request):
+    # 獲取景點資料
+    attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
+    
+    # 獲取用戶行程並計算景點數量
+    user_trips = Trip.objects.filter(user=request.user)[:5]  # 顯示前5個行程
+    
+    # 為每個行程添加景點數量
+    for trip in user_trips:
+        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
+    
+    # 獲取地區和景點類型用於搜尋下拉選單
+    regions = Region.objects.all().order_by('name')
+    attraction_types = AttractionType.objects.all().order_by('name')
+    
+    # 獲取用戶收藏的景點ID集合
+    user_favorites = set()
+    if request.user.is_authenticated:
+        user_favorites = set(
+            Favorite.objects.filter(user=request.user)
+            .values_list('attraction_id', flat=True)
+        )
+    
+    # 為每個景點添加收藏狀態
+    for attraction in attractions:
+        attraction.is_favorited = attraction.id in user_favorites
+
+    context = {
+        'attractions': attractions,
+        'user_trips': user_trips,
+        'regions': regions,
+        'attraction_types': attraction_types,
+        'user_favorites': user_favorites,
+    }
+    return render(request, 'travel/home.html', context)

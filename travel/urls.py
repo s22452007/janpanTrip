@@ -47,4 +47,10 @@ urlpatterns = [
     path('add-to-itinerary/', views.add_to_itinerary_view, name='add_to_itinerary'),
     path('change-attraction-day/', views.change_attraction_day_view, name='change_attraction_day'),
     path('update-attraction-duration/', views.update_attraction_duration_view, name='update_attraction_duration'),
+    
+    # 收藏功能相關路由
+    path('toggle-favorite/<int:attraction_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('get-favorite-status/', views.get_favorite_status, name='get_favorite_status'),
+    path('favorites/', views.favorites_view, name='favorites'),
+    
 ]

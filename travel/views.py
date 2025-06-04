@@ -86,11 +86,14 @@ def home_view(request):
     # 獲取景點資料（移除評分相關）
     attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
     
-    # 獲取用戶行程並計算景點數量
-    user_trips = Trip.objects.filter(user=request.user).order_by('-start_date')[:5]  # 顯示前5個行程，按時間排序
-    
-    # 為每個行程添加景點數量（使用新的 Itinerary 模型）
-    for trip in user_trips:
+    ## 獲取用戶行程並計算景點數量
+    user_trips = Trip.objects.filter(user=request.user).order_by('-start_date')[:3]  # 顯示前3個行程，按時間排序
+
+    ## 獲取用戶行程並計算景點數量
+    user_trips_me = Trip.objects.filter(user=request.user).order_by('-start_date')  # 顯示，按時間排序
+
+    ## 為每個行程添加景點數量（使用新的 Itinerary 模型）
+    for trip in user_trips_me:
         trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
     # 獲取用戶的最近收藏景點（前5個）
@@ -104,10 +107,11 @@ def home_view(request):
     regions = Region.objects.all().order_by('name')
     attraction_types = AttractionType.objects.all().order_by('name')
     
-
+    ##
     context = {
         'attractions': attractions,
         'user_trips': user_trips,
+        'user_trips_me': user_trips_me,
         'user_favorites': user_favorites,  # 新增收藏資料
         'regions': regions,
         'attraction_types': attraction_types,
@@ -668,14 +672,21 @@ def attraction_detail(request, attraction_id):
     """景點詳情頁面"""
     attraction = get_object_or_404(Attraction, id=attraction_id)
     
-    # 獲取用戶的行程列表
-    user_trips = []
+    ## 獲取用戶的行程列表
+    user_trips= []
     if request.user.is_authenticated:
-        user_trips = Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
+        user_trips= Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
     
+    ## 獲取用戶的行程列表
+    user_trips_me = []
+    if request.user.is_authenticated:
+        user_trips_me = Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
+    
+    ##
     context = {
         'attraction': attraction,
         'user_trips': user_trips,
+        'user_trips_me': user_trips_me,
     }
     return render(request, 'travel/attraction_detail.html', context)
 
@@ -1113,10 +1124,17 @@ def home_view(request):
     attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
     
     # 獲取用戶行程並計算景點數量
-    user_trips = Trip.objects.filter(user=request.user)[:5]  # 顯示前5個行程
+    user_trips= Trip.objects.filter(user=request.user)[:3]  # 顯示前3個行程
+
+    ## 獲取用戶行程並計算景點數量
+    user_trips_me = Trip.objects.filter(user=request.user)  # 顯示前個行程
     
-    # 為每個行程添加景點數量
+    ## 為每個行程添加景點數量
     for trip in user_trips:
+        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
+    
+    ## 為每個行程添加景點數量
+    for trip in user_trips_me:
         trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
     # 獲取地區和景點類型用於搜尋下拉選單
@@ -1135,9 +1153,11 @@ def home_view(request):
     for attraction in attractions:
         attraction.is_favorited = attraction.id in user_favorites
 
+    ##
     context = {
         'attractions': attractions,
         'user_trips': user_trips,
+        'user_trips_me': user_trips_me,
         'regions': regions,
         'attraction_types': attraction_types,
         'user_favorites': user_favorites,

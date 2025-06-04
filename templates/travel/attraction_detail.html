@@ -154,7 +154,7 @@
                     <label for="trip-select">選擇行程：</label>
                     <select id="trip-select" class="trip-select">
                         <option value="">請選擇行程...</option>
-                        {% for trip in user_trips %}
+                        {% for trip in user_trips_me %}
                             <option value="{{ trip.id }}">{{ trip.trip_name }}</option>
                         {% endfor %}
                     </select>

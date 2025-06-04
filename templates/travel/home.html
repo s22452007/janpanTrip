@@ -35,8 +35,6 @@
                 </div>
             </div>
 
-            <!-- 在你的 home.html 模板中，找到景點卡片的部分並替換為以下代碼 -->
-
             <div class="attractions-grid">
                 <!-- 動態加載景點卡片 -->
                 {% for attraction in attractions %}
@@ -59,31 +57,12 @@
                             {% endif %}
                         {% endif %}
                         
-                        <!-- 收藏按鈕 - 根據用戶收藏狀態設置初始樣式 -->
-                        {% if user.is_authenticated %}
-                            {% if attraction.is_favorited %}
-                                <!-- 已收藏狀態 -->
-                                <button class="favorite-btn favorited" 
-                                        onclick="event.stopPropagation(); toggleFavorite({{ attraction.id }}, this)"
-                                        title="取消收藏">
-                                    <span class="heart-icon">❤️</span>
-                                </button>
-                            {% else %}
-                                <!-- 未收藏狀態 -->
-                                <button class="favorite-btn" 
-                                        onclick="event.stopPropagation(); toggleFavorite({{ attraction.id }}, this)"
-                                        title="收藏景點">
-                                    <span class="heart-icon">🤍</span>
-                                </button>
-                            {% endif %}
-                        {% else %}
-                            <!-- 未登入用戶 -->
-                            <button class="favorite-btn" 
-                                    onclick="event.stopPropagation(); alert('請先登入才能收藏景點')"
-                                    title="請先登入">
-                                <span class="heart-icon">🤍</span>
-                            </button>
-                        {% endif %}
+                        <!-- 收藏按鈕 -->
+                        <button class="favorite-btn" 
+                                onclick="event.stopPropagation(); toggleFavorite({{ attraction.id }}, this)"
+                                title="收藏景點">
+                            <span class="heart-icon">🤍</span>
+                        </button>
                     </div>
                     
                     <div class="attraction-info">
@@ -104,7 +83,7 @@
             <div class="my-itinerary">
                 <div class="itinerary-title">我的行程</div>
                 
-                {% for trip in user_trips %}
+                {% for trip in user_trips_me %}
                 <div class="trip-card" onclick="viewTrip({{ trip.id }})">
                     <div class="trip-header">
                         <div class="trip-info">
@@ -181,12 +160,6 @@
 
             <!-- 最近的行程 - 使用真實資料 -->
             <div style="margin-bottom: 30px;">
-                <h3 style="color: #333; margin-bottom: 15px;">
-                    最近的行程
-                    {% if user_trips %}
-                        <a href="{% url 'travel:my_trips' %}" style="float: right; color: #ff69b4; text-decoration: none; font-size: 14px;">查看全部 →</a>
-                    {% endif %}
-                </h3>
                 <div class="itinerary-history">
                     {% if user_trips %}
                         {% for trip in user_trips %}

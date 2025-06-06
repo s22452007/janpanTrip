@@ -61,7 +61,6 @@ class Command(BaseCommand):
         {'name': '東京'},
         {'name': '大阪'},
         {'name': '京都'},
-        {'name': '奈良'},
         {'name': '沖繩'},
         {'name': '北海道'},
     ]

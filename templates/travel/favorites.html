@@ -68,10 +68,6 @@
                     {{ favorite.attraction.region.name }}・{{ favorite.attraction.address }}
                 </div>
                 <div class="attraction-type-badge">{{ favorite.attraction.attraction_type.name }}</div>
-                <div class="rating">
-                    <span class="stars">⭐⭐⭐⭐⭐</span>
-                    <span class="rating-score">5.0</span>
-                </div>
                 <div class="favorite-date">收藏於 {{ favorite.created_at|date:"Y年m月d日" }}</div>
             </div>
         </div>

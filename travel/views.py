@@ -301,17 +301,12 @@ def edit_trip_view(request, trip_id):
             trip=trip, 
             date=target_date
         ).order_by('visit_time', 'id')
-        
-        # 為每個景點計算離開時間
-        for item in day_attractions:
-            if item.visit_time and item.duration_minutes:
-                visit_datetime = datetime.combine(target_date, item.visit_time)
-                departure_datetime = visit_datetime + timedelta(minutes=item.duration_minutes)
-                item.departure_time = departure_datetime.time()
-            else:
-                item.departure_time = None
-        
         day_itineraries[day] = day_attractions
+        
+        # 調試輸出
+        print(f"第{day}天 ({target_date}): {day_attractions.count()}個景點")
+        for item in day_attractions:
+            print(f"  - {item.attraction.name} at {item.visit_time}")
     
     context = {
         'trip': trip,
@@ -646,21 +641,14 @@ def update_attraction_time_view(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            itinerary_id = data.get('itinerary_attraction_id')
+            itinerary_id = data.get('itinerary_attraction_id')  # 實際上是 itinerary_id
             new_time = data.get('new_time')
-            
-            print(f"=== 更新時間調試 ===")
-            print(f"itinerary_id: {itinerary_id}")
-            print(f"new_time: {new_time}")
             
             itinerary_item = get_object_or_404(
                 Itinerary, 
                 id=itinerary_id,
                 trip__user=request.user
             )
-            
-            print(f"找到行程項目: {itinerary_item.attraction.name}")
-            print(f"原始時間: {itinerary_item.visit_time}")
             
             # 將時間字符串轉換為 time 對象
             time_obj = datetime.strptime(new_time, '%H:%M').time()
@@ -669,16 +657,12 @@ def update_attraction_time_view(request):
             itinerary_item.visit_time = time_obj
             itinerary_item.save()
             
-            print(f"更新後時間: {itinerary_item.visit_time}")
-            print(f"==================")
-            
             return JsonResponse({
                 'success': True, 
                 'message': f'時間已更新為 {new_time}'
             })
             
         except Exception as e:
-            print(f"更新時間錯誤: {str(e)}")
             return JsonResponse({'success': False, 'message': str(e)})
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
@@ -1047,6 +1031,104 @@ def get_favorite_status(request):
             return JsonResponse({
                 'success': False,
                 'message': str(e)
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': '無效的請求方法'
+    })
+
+@login_required
+def update_trip_dates_view(request):
+    """更新行程日期"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            trip_id = data.get('trip_id')
+            start_date = data.get('start_date')
+            end_date = data.get('end_date')
+            start_time = data.get('start_time', '09:00')
+            end_time = data.get('end_time', '18:00')
+            
+            # 驗證必要參數
+            if not all([trip_id, start_date, end_date]):
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少必要參數'
+                })
+            
+            # 獲取行程
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            
+            # 解析日期和時間
+            try:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                start_time_obj = datetime.strptime(start_time, '%H:%M').time()
+                end_time_obj = datetime.strptime(end_time, '%H:%M').time()
+                
+                # 組合完整的 datetime
+                start_datetime = datetime.combine(start_date_obj, start_time_obj)
+                end_datetime = datetime.combine(end_date_obj, end_time_obj)
+                
+            except ValueError as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'日期格式錯誤：{str(e)}'
+                })
+            
+            # 驗證日期邏輯
+            if end_datetime <= start_datetime:
+                return JsonResponse({
+                    'success': False,
+                    'message': '結束日期必須晚於開始日期'
+                })
+            
+            # 計算新舊日期的差異
+            old_start_date = trip.start_date.date()
+            old_end_date = trip.end_date.date()
+            
+            # 更新行程日期
+            trip.start_date = start_datetime
+            trip.end_date = end_datetime
+            trip.save()
+            
+            # 如果日期範圍改變，需要檢查並調整現有的行程安排
+            if old_start_date != start_date_obj or old_end_date != end_date_obj:
+                # 獲取所有相關的行程安排
+                itineraries = Itinerary.objects.filter(trip=trip)
+                
+                # 檢查哪些行程安排的日期超出了新的日期範圍
+                invalid_itineraries = itineraries.filter(
+                    Q(date__lt=start_date_obj) | Q(date__gt=end_date_obj)
+                )
+                
+                if invalid_itineraries.exists():
+                    # 可以選擇刪除超出範圍的安排，或者調整到有效日期
+                    # 這裡選擇刪除超出範圍的安排
+                    removed_count = invalid_itineraries.count()
+                    invalid_itineraries.delete()
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'行程日期已更新，移除了 {removed_count} 個超出日期範圍的景點安排',
+                        'removed_count': removed_count
+                    })
+            
+            return JsonResponse({
+                'success': True,
+                'message': '行程日期已成功更新'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'更新失敗：{str(e)}'
             })
     
     return JsonResponse({

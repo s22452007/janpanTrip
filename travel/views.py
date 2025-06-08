@@ -301,12 +301,17 @@ def edit_trip_view(request, trip_id):
             trip=trip, 
             date=target_date
         ).order_by('visit_time', 'id')
-        day_itineraries[day] = day_attractions
         
-        # 調試輸出
-        print(f"第{day}天 ({target_date}): {day_attractions.count()}個景點")
+        # 為每個景點計算離開時間
         for item in day_attractions:
-            print(f"  - {item.attraction.name} at {item.visit_time}")
+            if item.visit_time and item.duration_minutes:
+                visit_datetime = datetime.combine(target_date, item.visit_time)
+                departure_datetime = visit_datetime + timedelta(minutes=item.duration_minutes)
+                item.departure_time = departure_datetime.time()
+            else:
+                item.departure_time = None
+        
+        day_itineraries[day] = day_attractions
     
     context = {
         'trip': trip,
@@ -641,14 +646,21 @@ def update_attraction_time_view(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            itinerary_id = data.get('itinerary_attraction_id')  # 實際上是 itinerary_id
+            itinerary_id = data.get('itinerary_attraction_id')
             new_time = data.get('new_time')
+            
+            print(f"=== 更新時間調試 ===")
+            print(f"itinerary_id: {itinerary_id}")
+            print(f"new_time: {new_time}")
             
             itinerary_item = get_object_or_404(
                 Itinerary, 
                 id=itinerary_id,
                 trip__user=request.user
             )
+            
+            print(f"找到行程項目: {itinerary_item.attraction.name}")
+            print(f"原始時間: {itinerary_item.visit_time}")
             
             # 將時間字符串轉換為 time 對象
             time_obj = datetime.strptime(new_time, '%H:%M').time()
@@ -657,12 +669,16 @@ def update_attraction_time_view(request):
             itinerary_item.visit_time = time_obj
             itinerary_item.save()
             
+            print(f"更新後時間: {itinerary_item.visit_time}")
+            print(f"==================")
+            
             return JsonResponse({
                 'success': True, 
                 'message': f'時間已更新為 {new_time}'
             })
             
         except Exception as e:
+            print(f"更新時間錯誤: {str(e)}")
             return JsonResponse({'success': False, 'message': str(e)})
     
     return JsonResponse({'success': False, 'message': '無效的請求'})

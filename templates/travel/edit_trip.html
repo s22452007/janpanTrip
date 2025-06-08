@@ -23,25 +23,38 @@
             <!-- 搜索區域 -->
             <div class="search-section">
                 <div class="search-input-container">
-                    <input type="text" class="search-input" placeholder="搜尋景點..." id="attraction-search">
+                    <input type="text" 
+                        class="search-input" 
+                        placeholder="搜尋景點..." 
+                        id="attraction-search" 
+                        name="search"
+                        autocomplete="off">
                 </div>
                 
                 <div class="filter-row">
-                    <select class="filter-select" id="region-filter">
+                    <select class="filter-select" 
+                            id="region-filter" 
+                            name="region"
+                            autocomplete="off">
                         <option value="">地區 ▼</option>
                         {% for region in regions %}
                             <option value="{{ region.name }}">{{ region.name }}</option>
                         {% endfor %}
                     </select>
                     
-                    <select class="filter-select" id="type-filter">
+                    <select class="filter-select" 
+                            id="type-filter" 
+                            name="type"
+                            autocomplete="off">
                         <option value="">類型 ▼</option>
                         {% for type in attraction_types %}
                             <option value="{{ type.name }}">{{ type.name }}</option>
                         {% endfor %}
                     </select>
                     
-                    <button class="search-btn" onclick="searchAttractions()">搜尋</button>
+                    <button type="button" 
+                            class="search-btn" 
+                            id="search-button">搜尋</button>
                 </div>
             </div>
 
@@ -183,9 +196,8 @@
     </div>
 </div>
 
-<!-- 保持原有的 CSS 樣式 -->
 <style>
-    /* 參觀時間輸入框樣式 */
+/* 參觀時間輸入框樣式 */
 .duration-input {
     width: 60px;
     padding: 4px 6px;
@@ -234,6 +246,7 @@
         width: 50px;
     }
 }
+
 .edit-trip-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -602,145 +615,242 @@
         flex-direction: column;
     }
 }
+
+.itinerary-item {
+    transition: all 0.3s ease;
+}
+
+/* 動畫樣式 */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
 </style>
 
 <script>
-// 頁面載入完成後綁定事件
-document.addEventListener('DOMContentLoaded', function() {
-    // 綁定搜索框事件
-    document.getElementById('attraction-search').addEventListener('input', searchAttractions);
-    
-    // 綁定篩選器變更事件
-    document.getElementById('region-filter').addEventListener('change', searchAttractions);
-    document.getElementById('type-filter').addEventListener('change', searchAttractions);
-    
-    // 綁定搜索按鈕
-    document.querySelector('.search-btn').addEventListener('click', searchAttractions);
-});
+// 全域變數定義
+window.tripData = {
+    id: {{ trip.id }},
+    days: [{% for day in trip_days %}{{ day }}{% if not forloop.last %},{% endif %}{% endfor %}],
+    csrfToken: '{{ csrf_token }}'
+};
 
-// 搜索景點功能
-function searchAttractions() {
-    const searchTerm = document.getElementById('attraction-search').value;
-    const region = document.getElementById('region-filter').value;
-    const type = document.getElementById('type-filter').value;
+console.log('Trip Data:', window.tripData);
+
+// 頁面載入完成後綁定所有事件
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('頁面載入完成，開始綁定所有事件');
     
-    console.log('搜索參數:', { searchTerm, region, type });
+    // ==================== 搜尋功能 ====================
     
-    const params = new URLSearchParams({
-        search: searchTerm,
-        region: region,
-        type: type,
-        trip_id: {{ trip.id }}
-    });
-    
-    fetch(`/search-available-attractions/?${params}`)
+    // 搜尋函數
+    function performSearch() {
+        console.log('執行搜尋');
+        
+        const searchInput = document.getElementById('attraction-search');
+        const regionSelect = document.getElementById('region-filter');
+        const typeSelect = document.getElementById('type-filter');
+        
+        if (!searchInput || !regionSelect || !typeSelect) {
+            console.error('找不到搜尋元素');
+            return;
+        }
+        
+        const searchTerm = searchInput.value.trim();
+        const region = regionSelect.value;
+        const type = typeSelect.value;
+        
+        console.log('搜尋參數:', { searchTerm, region, type });
+        
+        // 構建 URL
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (region) params.append('region', region);
+        if (type) params.append('type', type);
+        params.append('trip_id', window.tripData.id);
+        
+        const url = '/search-available-attractions/?' + params.toString();
+        console.log('請求 URL:', url);
+        
+        // 發送請求
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': window.tripData.csrfToken,
+                'Content-Type': 'application/json',
+            }
+        })
         .then(response => {
+            console.log('Response status:', response.status);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('Network response was not ok');
             }
             return response.json();
         })
         .then(data => {
-            console.log('搜索結果:', data);
-            if (data.success) {
+            console.log('搜尋結果:', data);
+            if (data.success && data.attractions) {
                 updateAttractionsList(data.attractions);
             } else {
-                console.error('搜索失敗:', data.message);
+                console.error('搜尋失敗或無結果');
+                updateAttractionsList([]);
             }
         })
         .catch(error => {
-            console.error('搜索請求失敗:', error);
+            console.error('搜尋錯誤:', error);
+            alert('搜尋失敗，請稍後再試');
         });
-}
-
-// 更新景點列表
-function updateAttractionsList(attractions) {
-    const container = document.getElementById('attractions-list');
-    container.innerHTML = '';
+    }
     
-    if (attractions.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #666;">
-                <p>沒有找到符合條件的景點</p>
-            </div>
-        `;
+    // 更新景點列表
+    function updateAttractionsList(attractions) {
+        console.log('更新景點列表，數量:', attractions.length);
+        
+        const container = document.getElementById('attractions-list');
+        if (!container) {
+            console.error('找不到景點容器');
+            return;
+        }
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        if (attractions.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><p>沒有找到符合條件的景點</p></div>';
+            return;
+        }
+        
+        // 創建景點元素
+        attractions.forEach(attraction => {
+            const item = document.createElement('div');
+            item.className = 'attraction-item';
+            
+            // 生成天數選項
+            const dayOptions = window.tripData.days.map(day => 
+                `<option value="${day}">第${day}天</option>`
+            ).join('');
+            
+            item.innerHTML = `
+                <div class="attraction-image">
+                    <img src="${attraction.image}" 
+                         alt="${attraction.name}" 
+                         onerror="this.src='https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop'">
+                </div>
+                <div class="attraction-info">
+                    <div class="attraction-name">${attraction.name}</div>
+                    <div class="attraction-location">${attraction.location}</div>
+                </div>
+                <div class="attraction-controls">
+                    <select class="day-select" data-attraction-id="${attraction.id}">
+                        ${dayOptions}
+                    </select>
+                    <button type="button" class="add-btn" onclick="addToItinerary(${attraction.id})">+ 加入行程</button>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+        
+        console.log('景點列表更新完成');
+    }
+    
+    // 綁定搜尋事件
+    const searchInput = document.getElementById('attraction-search');
+    const regionFilter = document.getElementById('region-filter');
+    const typeFilter = document.getElementById('type-filter');
+    const searchButton = document.getElementById('search-button');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', performSearch);
+        console.log('已綁定搜尋輸入事件');
+    }
+    
+    if (regionFilter) {
+        regionFilter.addEventListener('change', performSearch);
+        console.log('已綁定地區篩選事件');
+    }
+    
+    if (typeFilter) {
+        typeFilter.addEventListener('change', performSearch);
+        console.log('已綁定類型篩選事件');
+    }
+    
+    if (searchButton) {
+        searchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('點擊搜尋按鈕');
+            performSearch();
+        });
+        console.log('已綁定搜尋按鈕事件');
+    }
+    
+    console.log('搜尋功能綁定完成');
+});
+
+// ==================== 全域函數 ====================
+
+// 加入行程函數
+function addToItinerary(attractionId) {
+    console.log('加入行程，景點 ID:', attractionId);
+    
+    const daySelect = document.querySelector(`[data-attraction-id="${attractionId}"]`);
+    if (!daySelect) {
+        alert('無法找到天數選擇器');
         return;
     }
     
-    attractions.forEach(attraction => {
-        const item = document.createElement('div');
-        item.className = 'attraction-item';
-        item.innerHTML = `
-            <div class="attraction-image">
-                <img src="${attraction.image}" alt="${attraction.name}" onerror="this.src='https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop'">
-            </div>
-            <div class="attraction-info">
-                <div class="attraction-name">${attraction.name}</div>
-                <div class="attraction-location">${attraction.location}</div>
-            </div>
-            <div class="attraction-controls">
-                <select class="day-select" data-attraction-id="${attraction.id}">
-                    {% for day in trip_days %}
-                        <option value="{{ day }}">第{{ day }}天</option>
-                    {% endfor %}
-                </select>
-                <button class="add-btn" onclick="addToItinerary(${attraction.id})">+ 加入行程</button>
-            </div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// 加入行程
-function addToItinerary(attractionId) {
-    const daySelect = document.querySelector(`[data-attraction-id="${attractionId}"]`);
     const selectedDay = daySelect.value;
-    
-    console.log('加入行程:', { attractionId, selectedDay });
-    
-    // 禁用按鈕防止重複點擊
     const addBtn = daySelect.parentElement.querySelector('.add-btn');
+    
+    // 禁用按鈕
     addBtn.disabled = true;
     addBtn.textContent = '加入中...';
     
     fetch('/add-to-itinerary/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': window.tripData.csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            trip_id: {{ trip.id }},
+            trip_id: window.tripData.id,
             attraction_id: attractionId,
             day: selectedDay
         })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('加入結果:', data);
         if (data.success) {
-            // 顯示成功訊息
             showMessage(data.message, 'success');
-            // 重新載入頁面以顯示更新
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
             alert(data.message || '加入行程失敗');
-            // 恢復按鈕狀態
             addBtn.disabled = false;
             addBtn.textContent = '+ 加入行程';
         }
     })
     .catch(error => {
-        console.error('加入行程請求失敗:', error);
+        console.error('加入行程失敗:', error);
         alert('加入行程失敗，請稍後再試');
-        // 恢復按鈕狀態
         addBtn.disabled = false;
         addBtn.textContent = '+ 加入行程';
     });
@@ -752,7 +862,7 @@ function removeFromItinerary(itineraryId) {
         fetch(`/remove-from-trip/${itineraryId}/`, {
             method: 'DELETE',
             headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
+                'X-CSRFToken': window.tripData.csrfToken,
                 'Content-Type': 'application/json',
             },
         })
@@ -768,7 +878,7 @@ function removeFromItinerary(itineraryId) {
             }
         })
         .catch(error => {
-            console.error('移除請求失敗:', error);
+            console.error('移除失敗:', error);
             alert('移除景點失敗，請稍後再試');
         });
     }
@@ -776,10 +886,12 @@ function removeFromItinerary(itineraryId) {
 
 // 更改景點天數
 function changeDayForAttraction(itineraryId, newDay) {
+    console.log('更改天數:', { itineraryId, newDay });
+    
     fetch('/change-attraction-day/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': window.tripData.csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -789,6 +901,7 @@ function changeDayForAttraction(itineraryId, newDay) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('更改天數結果:', data);
         if (data.success) {
             showMessage(data.message, 'success');
             setTimeout(() => {
@@ -804,12 +917,14 @@ function changeDayForAttraction(itineraryId, newDay) {
     });
 }
 
-// 更新景點時間
+// 更新景點時間並即時重新排序
 function updateAttractionTime(itineraryId, newTime) {
+    console.log('更新時間:', { itineraryId, newTime });
+    
     fetch('/update-attraction-time/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': window.tripData.csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -819,20 +934,25 @@ function updateAttractionTime(itineraryId, newTime) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('更新時間結果:', data);
         if (data.success) {
             showMessage('時間已更新', 'success');
+            // 即時重新排序，而不是重新載入整個頁面
+            reorderAttractionsByTime();
         } else {
             alert(data.message || '時間更新失敗');
         }
     })
     .catch(error => {
         console.error('更新時間失敗:', error);
+        alert('時間更新失敗，請稍後再試');
     });
 }
 
-// 更新景點參觀時間（分鐘數）
+// 更新景點參觀時間並即時重新排序
 function updateAttractionDuration(itineraryId, newDuration) {
-    // 驗證輸入值
+    console.log('更新參觀時間:', { itineraryId, newDuration });
+    
     const duration = parseInt(newDuration);
     if (isNaN(duration) || duration < 1 || duration > 1440) {
         alert('參觀時間必須在 1-1440 分鐘之間');
@@ -842,7 +962,7 @@ function updateAttractionDuration(itineraryId, newDuration) {
     fetch('/update-attraction-duration/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': window.tripData.csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -852,6 +972,103 @@ function updateAttractionDuration(itineraryId, newDuration) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('更新參觀時間結果:', data);
+        if (data.success) {
+            showMessage(`參觀時間已更新為 ${duration} 分鐘`, 'success');
+            // 參觀時間更新不需要重新排序，因為不影響順序
+        } else {
+            alert(data.message || '參觀時間更新失敗');
+        }
+    })
+    .catch(error => {
+        console.error('更新參觀時間失敗:', error);
+        alert('更新參觀時間失敗，請稍後再試');
+    });
+}
+
+// 重新排序每天的景點（按時間順序）
+function reorderAttractionsByTime() {
+    console.log('開始重新排序景點');
+    
+    // 取得所有天數的區塊
+    const daySections = document.querySelectorAll('.day-section');
+    
+    daySections.forEach(daySection => {
+        const dayNumber = daySection.getAttribute('data-day');
+        const attractionsContainer = daySection.querySelector('.day-attractions');
+        const attractionItems = Array.from(attractionsContainer.querySelectorAll('.itinerary-item'));
+        
+        if (attractionItems.length <= 1) {
+            return; // 如果只有一個或沒有景點，就不需要排序
+        }
+        
+        console.log(`第${dayNumber}天有 ${attractionItems.length} 個景點需要排序`);
+        
+        // 為每個景點項目提取時間資訊
+        const itemsWithTime = attractionItems.map(item => {
+            const timeInput = item.querySelector('.time-input');
+            const timeValue = timeInput ? timeInput.value : '09:00';
+            
+            // 將時間轉換為分鐘數以便排序
+            const [hours, minutes] = timeValue.split(':').map(Number);
+            const totalMinutes = hours * 60 + minutes;
+            
+            return {
+                element: item,
+                time: timeValue,
+                totalMinutes: totalMinutes
+            };
+        });
+        
+        // 按時間排序
+        itemsWithTime.sort((a, b) => a.totalMinutes - b.totalMinutes);
+        
+        // 重新插入排序後的元素
+        const emptyDayElement = attractionsContainer.querySelector('.empty-day');
+        
+        // 清空容器
+        attractionsContainer.innerHTML = '';
+        
+        // 插入排序後的景點
+        itemsWithTime.forEach(item => {
+            attractionsContainer.appendChild(item.element);
+        });
+        
+        // 如果原本有空狀態元素，在最後重新加入
+        if (emptyDayElement && itemsWithTime.length === 0) {
+            attractionsContainer.appendChild(emptyDayElement);
+        }
+        
+        console.log(`第${dayNumber}天排序完成`);
+    });
+    
+    console.log('所有景點重新排序完成');
+}
+
+// 更新景點參觀時間（分鐘數）
+function updateAttractionDuration(itineraryId, newDuration) {
+    console.log('更新參觀時間:', { itineraryId, newDuration });
+    
+    const duration = parseInt(newDuration);
+    if (isNaN(duration) || duration < 1 || duration > 1440) {
+        alert('參觀時間必須在 1-1440 分鐘之間');
+        return;
+    }
+    
+    fetch('/update-attraction-duration/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': window.tripData.csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            itinerary_attraction_id: itineraryId,
+            new_duration: duration
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('更新參觀時間結果:', data);
         if (data.success) {
             showMessage(`參觀時間已更新為 ${duration} 分鐘`, 'success');
         } else {
@@ -905,31 +1122,34 @@ function showMessage(message, type = 'info') {
     }, 3000);
 }
 
-// 添加 CSS 動畫
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
+// 添加 CSS 動畫（如果還沒有的話）
+if (!document.querySelector('#message-animations')) {
+    const style = document.createElement('style');
+    style.id = 'message-animations';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
-        to {
-            transform: translateX(0);
-            opacity: 1;
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(style);
+}
 </script>
 {% endblock %}

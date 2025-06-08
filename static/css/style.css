@@ -932,7 +932,7 @@ body {
     padding: 15px;
     padding-bottom: 60px; /* 🎯 為按鈕留出空間 */
     height: calc(350px - 180px); /* 剩餘高度 */
-    box-sizin
+}
 
 /* 🎯 確保卡片有相對定位 */
 .attraction-card {

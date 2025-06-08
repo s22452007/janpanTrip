@@ -12,6 +12,52 @@
         <h2>{{ trip.trip_name }}</h2>
     </div>
 
+    <div class="trip-date-section">
+        <div class="date-header">
+            <span class="calendar-icon">📅</span>
+            <h3>旅程日期設定</h3>
+        </div>
+        
+        <div class="date-inputs-container">
+            <div class="date-input-group">
+                <label class="date-label">出發日期</label>
+                <div class="date-input-wrapper">
+                    <input type="date" 
+                        class="date-input" 
+                        id="trip-start-date"
+                        value="{{ trip.start_date|date:'Y-m-d' }}"
+                        onchange="updateTripDate('start', this.value)">
+                    <span class="date-icon">📆</span>
+                </div>
+            </div>
+            
+            <div class="date-separator">
+                <span class="arrow-icon">→</span>
+            </div>
+            
+            <div class="date-input-group">
+                <label class="date-label">回程日期</label>
+                <div class="date-input-wrapper">
+                    <input type="date" 
+                        class="date-input" 
+                        id="trip-end-date"
+                        value="{{ trip.end_date|date:'Y-m-d' }}"
+                        onchange="updateTripDate('end', this.value)">
+                    <span class="date-icon">📆</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="trip-duration-info">
+            <span class="duration-text" id="trip-duration-text">
+                旅程天數：{{ trip.duration_days }} 天
+            </span>
+            <button type="button" class="save-dates-btn" id="save-dates-btn" onclick="saveTripDates()">
+                💾 儲存日期
+            </button>
+        </div>
+    </div>
+
     <!-- 分屏佈局 -->
     <div class="split-layout">
         <!-- 左側：景點選擇區 -->
@@ -227,6 +273,242 @@
 </div>
 
 <style>
+/* 旅程日期設定區塊 */
+.trip-date-section {
+    background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+    border: 1px solid #f3e8ff;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 32px rgba(236, 72, 153, 0.12);
+    backdrop-filter: blur(10px);
+}
+
+/* 日期標題 */
+.date-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.calendar-icon {
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.date-header h3 {
+    color: #be185d;
+    font-weight: 700;
+    font-size: 18px;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+/* 日期輸入容器 */
+.date-inputs-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.date-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+}
+
+.date-label {
+    color: #be185d;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+}
+
+.date-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.date-input {
+    width: 100%;
+    background: #ffffff;
+    border: 3px solid #e879f9;
+    border-radius: 15px;
+    padding: 16px 20px;
+    font-size: 16px;
+    color: #1f2937;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-family: system-ui, -apple-system, sans-serif;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(232, 121, 249, 0.2);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #ec4899;
+    box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.2), 0 8px 24px rgba(232, 121, 249, 0.3);
+    background-color: #fefefe;
+    transform: translateY(-2px);
+}
+
+.date-input:hover {
+    border-color: #ec4899;
+    background-color: #fefefe;
+    box-shadow: 0 6px 20px rgba(232, 121, 249, 0.25);
+    transform: translateY(-1px);
+}
+
+.date-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 18px;
+    opacity: 0.7;
+}
+
+/* 日期分隔符 */
+.date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arrow-icon {
+    color: #be185d;
+    font-weight: 700;
+    font-size: 24px;
+    opacity: 0.8;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+/* 旅程資訊 */
+.trip-duration-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid #f8bbd9;
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 16px rgba(236, 72, 153, 0.1);
+}
+
+.duration-text {
+    color: #be185d;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.save-dates-btn {
+    background: linear-gradient(135deg, #ec4899, #be185d);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(236, 72, 153, 0.3);
+    letter-spacing: 0.5px;
+}
+
+.save-dates-btn:hover {
+    background: linear-gradient(135deg, #be185d, #a21caf);
+    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+    transform: translateY(-2px);
+}
+
+.save-dates-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+}
+
+/* 成功/錯誤狀態 */
+.date-input.success {
+    border-color: #22c55e;
+    background-color: #f0fdf4;
+}
+
+.date-input.error {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.save-dates-btn.saving {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .trip-date-section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .date-inputs-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .date-separator {
+        order: 1;
+    }
+    
+    .arrow-icon {
+        transform: rotate(90deg);
+        font-size: 20px;
+    }
+    
+    .date-input-group {
+        min-width: 100%;
+    }
+    
+    .date-input {
+        font-size: 15px;
+        padding: 14px 18px;
+    }
+    
+    .trip-duration-info {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+    
+    .save-dates-btn {
+        width: 100%;
+    }
+}
+
+/* 載入動畫 */
+@keyframes dateSuccess {
+    0% { background-color: #f0fdf4; border-color: #22c55e; }
+    100% { background-color: #ffffff; border-color: #e879f9; }
+}
+
+.date-input.save-animation {
+    animation: dateSuccess 1.5s ease-out;
+}
+
 /* 編輯行程容器 */
 .edit-trip-container {
     max-width: 1400px;
@@ -1581,35 +1863,332 @@ if (typeof window.tripData === 'undefined') {
     };
 }
 
-console.log('=== 調試資訊 ===');
-console.log('CSRF Token:', '{{ csrf_token }}');
-console.log('Trip Data:', {
-    id: {{ trip.id }},
-    days: [{% for day in trip_days %}{{ day }}{% if not forloop.last %},{% endif %}{% endfor %}]
-});
-
-// 檢查每個景點的時間
-{% for day, day_attractions in day_itineraries.items %}
-    console.log('=== 第{{ day }}天 ===');
-    {% for itinerary_item in day_attractions %}
-        console.log('景點 {{ itinerary_item.id }}:', {
-            name: '{{ itinerary_item.attraction.name }}',
-            visit_time_raw: '{{ itinerary_item.visit_time }}',
-            visit_time_formatted: '{% if itinerary_item.visit_time %}{{ itinerary_item.visit_time|time:"H:i" }}{% else %}null{% endif %}',
-            duration_minutes: {{ itinerary_item.duration_minutes|default:0 }}
+// 更新旅程日期
+function updateTripDate(type, newDate) {
+    console.log(`更新${type === 'start' ? '出發' : '回程'}日期:`, newDate);
+    
+    const startInput = document.getElementById('trip-start-date');
+    const endInput = document.getElementById('trip-end-date');
+    const durationText = document.getElementById('trip-duration-text');
+    
+    // 驗證日期邏輯
+    if (startInput.value && endInput.value) {
+        const startDate = new Date(startInput.value);
+        const endDate = new Date(endInput.value);
+        
+        if (endDate < startDate) {
+            // 日期錯誤
+            const errorInput = type === 'start' ? startInput : endInput;
+            errorInput.classList.add('error');
+            setTimeout(() => errorInput.classList.remove('error'), 2000);
+            
+            durationText.textContent = '日期設定錯誤：回程日期不能早於出發日期';
+            durationText.style.color = '#ef4444';
+            return;
+        }
+        
+        // 正確的天數計算方式
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const dayDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+        
+        console.log('日期計算:', {
+            startDate: startInput.value,
+            endDate: endInput.value,
+            timeDiff: timeDiff,
+            dayDiff: dayDiff
         });
-    {% endfor %}
-{% endfor %}
-console.log('===============');
+        
+        durationText.textContent = `旅程天數：${dayDiff} 天`;
+        durationText.style.color = '#be185d';
+        
+        // 更新右側統計卡片中的總天數
+        updateTripStatsDisplay(dayDiff);
+        
+        // 顯示成功狀態
+        const changedInput = type === 'start' ? startInput : endInput;
+        changedInput.classList.add('success');
+        setTimeout(() => changedInput.classList.remove('success'), 1000);
+    }
+}
 
-// 在頁面完全載入後檢查輸入框的值
-window.addEventListener('load', function() {
-    console.log('=== 檢查輸入框實際值 ===');
-    document.querySelectorAll('.time-input').forEach(input => {
-        console.log(`${input.id}: ${input.value}`);
+// 更新右側統計顯示
+function updateTripStatsDisplay(newDays) {
+    // 更新統計卡片中的天數
+    const statNumbers = document.querySelectorAll('.stat-number');
+    if (statNumbers.length > 0) {
+        // 第一個統計卡片通常是總天數
+        statNumbers[0].textContent = newDays;
+    }
+    
+    // 也可以嘗試通過更具體的選擇器
+    const daysStatCard = document.querySelector('.stat-card:first-child .stat-number');
+    if (daysStatCard) {
+        daysStatCard.textContent = newDays;
+    }
+    
+    // 更新左側景點選擇的天數選項
+    updateAttractionDaySelectors(newDays);
+    
+    // 動態更新右側天數框架
+    updateDaysSections(newDays);
+    
+    console.log(`已更新統計顯示為 ${newDays} 天`);
+}
+
+// 更新左側景點選擇的天數下拉選單
+function updateAttractionDaySelectors(totalDays) {
+    // 更新所有景點的天數選擇器
+    const daySelects = document.querySelectorAll('.day-select');
+    
+    daySelects.forEach(select => {
+        const currentValue = select.value;
+        
+        // 清空選項
+        select.innerHTML = '';
+        
+        // 重新生成選項
+        for (let day = 1; day <= totalDays; day++) {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = `第${day}天`;
+            select.appendChild(option);
+        }
+        
+        // 恢復原有選擇（如果還在範圍內）
+        if (currentValue && currentValue <= totalDays) {
+            select.value = currentValue;
+        } else {
+            select.value = 1; // 如果原有選擇超出範圍，設為第1天
+        }
     });
-    console.log('====================');
-});
+    
+    // 更新右側行程中的天數選擇器
+    const dayChangeSelects = document.querySelectorAll('.day-change-select');
+    
+    dayChangeSelects.forEach(select => {
+        const currentValue = select.value;
+        
+        // 清空選項
+        select.innerHTML = '';
+        
+        // 重新生成選項
+        for (let day = 1; day <= totalDays; day++) {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = `第${day}天`;
+            select.appendChild(option);
+        }
+        
+        // 恢復原有選擇（如果還在範圍內）
+        if (currentValue && currentValue <= totalDays) {
+            select.value = currentValue;
+        } else {
+            select.value = 1;
+        }
+    });
+    
+    console.log(`已更新天數選擇器選項為 1-${totalDays} 天`);
+}
 
+// 動態更新右側天數框架
+function updateDaysSections(totalDays) {
+    const timelineContainer = document.getElementById('itinerary-timeline');
+    if (!timelineContainer) return;
+    
+    // 獲取現有的天數框
+    const existingSections = timelineContainer.querySelectorAll('.day-section');
+    const currentDays = existingSections.length;
+    
+    if (totalDays > currentDays) {
+        // 需要添加天數框
+        for (let day = currentDays + 1; day <= totalDays; day++) {
+            addDaySection(day, timelineContainer);
+        }
+    } else if (totalDays < currentDays) {
+        // 需要移除天數框
+        for (let day = currentDays; day > totalDays; day--) {
+            const sectionToRemove = timelineContainer.querySelector(`[data-day="${day}"]`);
+            if (sectionToRemove) {
+                sectionToRemove.remove();
+            }
+        }
+    }
+    
+    console.log(`已更新天數框架為 ${totalDays} 個天數`);
+}
+
+// 添加新的天數框
+function addDaySection(dayNumber, container) {
+    const newSection = document.createElement('div');
+    newSection.className = 'day-section';
+    newSection.setAttribute('data-day', dayNumber);
+    
+    newSection.innerHTML = `
+        <div class="day-header">
+            <div class="day-number">${dayNumber}</div>
+            <div class="day-title">第 ${dayNumber} 天 
+                <span class="day-count">0 個景點</span>
+            </div>
+        </div>
+        
+        <div class="day-attractions" id="day-${dayNumber}-attractions">
+            <div class="empty-day">
+                <p>這天還沒有安排景點</p>
+                <p class="empty-hint">從左側選擇景點並設定為第${dayNumber}天</p>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newSection);
+}
+
+// 當搜尋結果更新時，也要確保天數選項正確
+function updateAttractionsList(attractions) {
+    console.log('更新景點列表，數量:', attractions.length);
+    
+    const container = document.getElementById('attractions-list');
+    if (!container) {
+        console.error('找不到景點容器');
+        return;
+    }
+    
+    // 清空容器
+    container.innerHTML = '';
+    
+    if (attractions.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><p>沒有找到符合條件的景點</p></div>';
+        return;
+    }
+    
+    // 獲取當前的天數
+    const currentDays = getCurrentTotalDays();
+    
+    // 創建景點元素
+    attractions.forEach(attraction => {
+        const item = document.createElement('div');
+        item.className = 'attraction-item';
+        
+        // 生成天數選項（使用當前的總天數）
+        const dayOptions = [];
+        for (let day = 1; day <= currentDays; day++) {
+            dayOptions.push(`<option value="${day}">第${day}天</option>`);
+        }
+        
+        item.innerHTML = `
+            <div class="attraction-image">
+                <img src="${attraction.image}" 
+                     alt="${attraction.name}" 
+                     onerror="this.src='https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=80&h=80&fit=crop'">
+            </div>
+            <div class="attraction-info">
+                <div class="attraction-name">${attraction.name}</div>
+                <div class="attraction-location">${attraction.location}</div>
+            </div>
+            <div class="attraction-controls">
+                <select class="day-select" data-attraction-id="${attraction.id}">
+                    ${dayOptions.join('')}
+                </select>
+                <button type="button" class="add-btn" onclick="addToItinerary(${attraction.id})">+ 加入行程</button>
+            </div>
+        `;
+        
+        container.appendChild(item);
+    });
+    
+    console.log('景點列表更新完成');
+}
+
+// 獲取當前總天數
+function getCurrentTotalDays() {
+    const statNumber = document.querySelector('.stat-card:first-child .stat-number');
+    if (statNumber) {
+        return parseInt(statNumber.textContent) || 3;
+    }
+    return 3; // 預設值
+}
+
+// 儲存旅程日期
+function saveTripDates() {
+    const startDate = document.getElementById('trip-start-date').value;
+    const endDate = document.getElementById('trip-end-date').value;
+    const saveBtn = document.getElementById('save-dates-btn');
+    
+    if (!startDate || !endDate) {
+        alert('請選擇完整的出發和回程日期');
+        return;
+    }
+    
+    // 驗證日期
+    if (new Date(endDate) < new Date(startDate)) {
+        alert('回程日期不能早於出發日期');
+        return;
+    }
+    
+    // 禁用按鈕
+    saveBtn.classList.add('saving');
+    saveBtn.textContent = '🔄 儲存中...';
+    saveBtn.disabled = true;
+    
+    // 發送到後端
+    fetch('/update-trip-dates/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': window.tripData?.csrfToken || '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            trip_id: window.tripData?.id || {{ trip.id }},
+            start_date: startDate,
+            end_date: endDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 成功
+            document.getElementById('trip-start-date').classList.add('save-animation');
+            document.getElementById('trip-end-date').classList.add('save-animation');
+            
+            saveBtn.textContent = '✅ 儲存成功';
+            saveBtn.style.background = '#22c55e';
+            
+            setTimeout(() => {
+                saveBtn.classList.remove('saving');
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 儲存日期';
+                saveBtn.style.background = '';
+                
+                // 重新載入頁面以更新行程天數
+                if (data.duration_changed) {
+                    location.reload();
+                }
+            }, 2000);
+            
+        } else {
+            throw new Error(data.message || '儲存失敗');
+        }
+    })
+    .catch(error => {
+        console.error('儲存日期失敗:', error);
+        
+        saveBtn.classList.remove('saving');
+        saveBtn.disabled = false;
+        saveBtn.textContent = '❌ 儲存失敗';
+        saveBtn.style.background = '#ef4444';
+        
+        setTimeout(() => {
+            saveBtn.textContent = '💾 儲存日期';
+            saveBtn.style.background = '';
+        }, 3000);
+        
+        alert('儲存日期失敗，請稍後再試');
+    });
+}
+
+// 頁面載入時初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化日期顯示
+    updateTripDate('start', document.getElementById('trip-start-date').value);
+});
 </script>
 {% endblock %}

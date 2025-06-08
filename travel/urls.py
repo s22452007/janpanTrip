@@ -48,6 +48,7 @@ urlpatterns = [
     path('change-attraction-day/', views.change_attraction_day_view, name='change_attraction_day'),
     path('update-attraction-duration/', views.update_attraction_duration_view, name='update_attraction_duration'),
     path('update-attraction-time/', views.update_attraction_time_view, name='update_attraction_time'),
+    path('update-trip-dates/', views.update_trip_dates_view, name='update_trip_dates'),
     
     # 收藏功能相關路由
     path('toggle-favorite/<int:attraction_id>/', views.toggle_favorite, name='toggle_favorite'),

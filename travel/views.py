@@ -1189,3 +1189,59 @@ def update_departure_time_view(request):
             return JsonResponse({'success': False, 'message': str(e)})
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
+
+@login_required
+def update_trip_dates_view(request):
+    """更新旅程日期"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            trip_id = data.get('trip_id')
+            start_date = data.get('start_date')
+            end_date = data.get('end_date')
+            
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            
+            # 轉換日期格式
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            
+            # 驗證日期邏輯
+            if end_date_obj < start_date_obj:
+                return JsonResponse({
+                    'success': False,
+                    'message': '回程日期不能早於出發日期'
+                })
+            
+            # 檢查是否天數有變化
+            old_duration = trip.duration_days
+            
+            # 更新日期（保持原有的時間）
+            trip.start_date = datetime.combine(start_date_obj, trip.start_date.time())
+            trip.end_date = datetime.combine(end_date_obj, trip.end_date.time())
+            trip.save()
+            
+            new_duration = trip.duration_days
+            duration_changed = old_duration != new_duration
+            
+            # 如果天數有變化，需要調整行程
+            if duration_changed:
+                # 清理超出新日期範圍的行程項目
+                for day in range(new_duration + 1, old_duration + 1):
+                    target_date = trip.start_date.date() + timedelta(days=day-1)
+                    Itinerary.objects.filter(trip=trip, date=target_date).delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': '日期已更新',
+                'duration_changed': duration_changed,
+                'new_duration': new_duration
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'更新失敗：{str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': '無效的請求'})

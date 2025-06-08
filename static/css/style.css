@@ -818,6 +818,8 @@ body {
     background: #e55aa0;
 }
 
+/* 🎯 清理後的景點卡片樣式 - 請完整替換 */
+
 /* 景點網格 */
 .attractions-grid {
     display: grid;
@@ -832,7 +834,10 @@ body {
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer; /* 添加指針樣式 */
+    cursor: pointer;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
 }
 
 .attraction-card:hover {
@@ -840,66 +845,134 @@ body {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
 }
 
+.attraction-image-container {
+    position: relative;
+    overflow: hidden;
+    height: 180px;
+    flex-shrink: 0;
+}
+
 .attraction-image {
     width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.heart-icon {
+    font-size: 20px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.favorite-btn.favorited {
+    background: rgba(255, 23, 68, 0.1);
+    border: 2px solid #ff1744;
+}
+
+.favorite-btn.favorited .heart-icon {
+    color: #ff1744;
+}
+
+/* 🎯 完全修正版 - 確保按鈕固定 */
+.attraction-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    height: 350px;
+    display: block; /* 🎯 改為 block */
+    position: relative; /* 🎯 關鍵：相對定位 */
+}
+
+.attraction-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.attraction-image-container {
+    position: relative;
+    overflow: hidden;
     height: 180px;
+}
+
+.attraction-image {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
 
 .attraction-info {
     padding: 15px;
-}
+    padding-bottom: 60px; /* 🎯 為按鈕留出空間 */
+    height: calc(350px - 180px); /* 剩餘高度 */
+    box-sizin
 
-.attraction-name {
-    font-weight: bold;
-    font-size: 16px;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-.attraction-location {
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-
-.attraction-rating {
-    color: #ffa500;
-    margin-bottom: 10px;
-}
-
-/* 更新按鈕樣式 - 從 add-to-plan-btn 改為 view-detail-btn */
-.view-detail-btn {
-    width: 100%;
-    padding: 10px;
-    background: #ff69b4; /* 查看詳情 */
-    color: white;
-    border: none;
-    border-radius: 6px;
+/* 🎯 確保卡片有相對定位 */
+.attraction-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
-    font-weight: 500;
-    transition: background 0.3s ease;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* 🎯 新增：相對定位 */
 }
 
-.view-detail-btn:hover {
-    background: #747d85; /* hover 時的深灰色 */
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
 }
 
-/* 保留舊的按鈕樣式以防其他地方使用 */
-.add-to-plan-btn {
-    width: 100%;
-    padding: 10px;
-    background: #ff69b4;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.3s ease;
-}
-
-.add-to-plan-btn:hover {
-    background: #e55aa0;
+@media (max-width: 768px) {
+    .attraction-card {
+        height: 320px;
+    }
+    
+    .attraction-image-container {
+        height: 160px;
+    }
+    
+    .favorite-btn {
+        width: 36px;
+        height: 36px;
+        top: 8px;
+        right: 8px;
+    }
+    
+    .heart-icon {
+        font-size: 18px;
+    }
 }
 /* 行程管理 */
 .my-itinerary {

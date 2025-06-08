@@ -88,7 +88,13 @@ class Trip(models.Model):
     
     @property
     def duration_days(self):
-        return (self.end_date.date() - self.start_date.date()).days + 1
+        # 確保使用日期部分，忽略時間
+        start_date = self.start_date.date() if hasattr(self.start_date, 'date') else self.start_date
+        end_date = self.end_date.date() if hasattr(self.end_date, 'date') else self.end_date
+        
+        days = (end_date - start_date).days + 1
+        print(f"Debug: {start_date} to {end_date} = {days} days")  # 調試用，之後可刪除
+        return days
     
     # 為了向後相容，保留舊的屬性名稱
     @property

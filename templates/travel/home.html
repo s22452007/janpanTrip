@@ -394,6 +394,15 @@
     border-color: #ff69b4;
     box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
 }
+/* 景點名稱樣式 - 粗體和放大字體 */
+.attraction-name {
+    font-weight: bold;
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: #333;
+    line-height: 1.3;
+}
+
 /* 為新的景點類型樣式 */
 .attraction-type {
     color: #ff69b4;
@@ -404,6 +413,41 @@
     background: rgba(255, 105, 180, 0.1);
     border-radius: 12px;
     display: inline-block;
+}
+
+/* 景點卡片容器需要設定相對定位 */
+.attraction-card {
+    position: relative;
+}
+
+/* 景點資訊區域也需要相對定位 */
+.attraction-info {
+    position: relative;
+    padding-bottom: 50px; /* 為按鈕留出空間 */
+}
+
+/* 修改查看詳情按鈕樣式 - 移除邊框並定位到右下角 */
+.view-detail-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    border: none; /* 移除邊框 */
+    background: #ff69b4;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+}
+
+.view-detail-btn:hover {
+    background: #e91e63;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
 
 /* 收藏按鈕樣式 */
@@ -466,12 +510,6 @@
     }
 }
 
-/* 確保查看詳情按鈕可以正常點擊 */
-.view-detail-btn {
-    position: relative;
-    z-index: 5;
-}
-
 /* 響應式設計 */
 @media (max-width: 768px) {
     .favorite-btn {
@@ -483,6 +521,17 @@
     
     .heart-icon {
         font-size: 18px;
+    }
+    
+    .view-detail-btn {
+        bottom: 8px;
+        right: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .attraction-info {
+        padding-bottom: 45px;
     }
 }
 </style>

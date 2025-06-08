@@ -79,40 +79,6 @@
                 </div>
                 {% endfor %}
             </div>
-
-            <div class="my-itinerary">
-                <div class="itinerary-title">我的行程</div>
-                
-                {% for trip in user_trips_me %}
-                <div class="trip-card" onclick="viewTrip({{ trip.id }})">
-                    <div class="trip-header">
-                        <div class="trip-info">
-                            <div class="trip-name">{{ trip.trip_name }}</div>
-                            <div class="trip-meta">
-                                <div class="trip-dates">{{ trip.start_date|date:"Y/m/d" }} - {{ trip.end_date|date:"Y/m/d" }}</div>
-                                <div class="trip-stats">已規劃景點: <span class="attraction-count">{{ trip.total_attractions|default:0 }}</span></div>
-                            </div>
-                        </div>
-                        <div class="trip-actions">
-                            <button class="action-btn edit-btn" onclick="event.stopPropagation(); editTrip({{ trip.id }})">編輯</button>
-                            <button class="action-btn delete-btn" onclick="event.stopPropagation(); deleteTrip({{ trip.id }})">刪除</button>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-trips">
-                    <div class="no-trips-icon">✈️</div>
-                    <p>你還沒有創建任何行程</p>
-                    <p class="no-trips-subtitle">點擊下方按鈕建立你的第一個行程！</p>
-                </div>
-                {% endfor %}
-                
-                <!-- 建立新行程按鈕 -->
-                <a href="{% url 'travel:create_trip' %}" class="create-trip-btn">
-                    <span class="btn-icon">+</span>
-                    建立行程
-                </a>
-            </div>
         </div>
 
         <!-- 用戶管理頁面 -->
@@ -153,7 +119,7 @@
                     </div>
                 </div>
             </div>
-        
+    
             <div id="messages-container" style="margin-top: 10px; font-weight: bold; padding: 5px; border-radius: 3px;"></div>
             
             <div class="section-title">最近行程</div>
@@ -189,6 +155,39 @@
                         </div>
                     {% endif %}
                 </div>
+            </div>
+            <div class="my-itinerary">
+                <div class="itinerary-title">我的行程</div>
+                
+                {% for trip in user_trips_me %}
+                <div class="trip-card" onclick="viewTrip({{ trip.id }})">
+                    <div class="trip-header">
+                        <div class="trip-info">
+                            <div class="trip-name">{{ trip.trip_name }}</div>
+                            <div class="trip-meta">
+                                <div class="trip-dates">{{ trip.start_date|date:"Y/m/d" }} - {{ trip.end_date|date:"Y/m/d" }}</div>
+                                <div class="trip-stats">已規劃景點: <span class="attraction-count">{{ trip.total_attractions|default:0 }}</span></div>
+                            </div>
+                        </div>
+                        <div class="trip-actions">
+                            <button class="action-btn edit-btn" onclick="event.stopPropagation(); editTrip({{ trip.id }})">編輯</button>
+                            <button class="action-btn delete-btn" onclick="event.stopPropagation(); deleteTrip({{ trip.id }})">刪除</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-trips">
+                    <div class="no-trips-icon">✈️</div>
+                    <p>你還沒有創建任何行程</p>
+                    <p class="no-trips-subtitle">點擊下方按鈕建立你的第一個行程！</p>
+                </div>
+                {% endfor %}
+                
+                <!-- 建立新行程按鈕 -->
+                <a href="{% url 'travel:create_trip' %}" class="create-trip-btn">
+                    <span class="btn-icon">+</span>
+                    建立行程
+                </a>
             </div>
         </div>
     </div>

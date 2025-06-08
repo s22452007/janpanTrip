@@ -1006,19 +1006,11 @@ def update_attraction_duration_view(request):
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
 
-# 在你的 views.py 中添加這個新視圖
-
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-
-# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
-
-# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
-
-# 在你的 views.py 中，找到現有的 get_favorite_status 函數並替換為以下代碼
 
 @login_required
 @require_POST

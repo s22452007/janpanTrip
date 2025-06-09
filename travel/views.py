@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Q, Max
 from .models import Attraction, Trip, UserProfile, Region, AttractionType, Itinerary, Favorite
 from datetime import datetime, date, time
 from datetime import timedelta
@@ -86,33 +86,32 @@ def home_view(request):
     # 獲取景點資料（移除評分相關）
     attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
     
-    ## 獲取用戶行程並計算景點數量
-    user_trips = Trip.objects.filter(user=request.user).order_by('-start_date')[:3]  # 顯示前3個行程，按時間排序
-
-    ## 獲取用戶行程並計算景點數量
-    user_trips_me = Trip.objects.filter(user=request.user).order_by('-start_date')  # 顯示，按時間排序
-
-    ## 為每個行程添加景點數量（使用新的 Itinerary 模型）
-    for trip in user_trips_me:
+    # 獲取用戶行程並計算景點數量（只顯示最近編輯的3個）- 用於"最近行程"
+    # 使用子查詢獲取每個行程最新的 Itinerary 記錄時間作為"最近編輯"依據
+    user_trips = Trip.objects.filter(user=request.user).annotate(
+        last_edited=Max('itinerary__id')  # 使用最新的 itinerary 記錄作為編輯時間
+    ).order_by('-last_edited', '-id')[:3]  # 先按最後編輯排序，再按創建時間
+    
+    # 為每個行程添加景點數量（使用新的 Itinerary 模型）
+    for trip in user_trips:
         trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
-    # 獲取用戶的最近收藏景點（前5個）
-    user_favorites = Favorite.objects.filter(user=request.user).select_related(
-        'attraction', 
-        'attraction__region', 
-        'attraction__attraction_type'
-    ).order_by('-created_at')[:5]
+    # 獲取用戶所有行程 - 用於"我的行程"部分（顯示全部）
+    user_trips_me = Trip.objects.filter(user=request.user).order_by('-start_date')  # 顯示全部行程
+    
+    # 為"我的行程"也添加景點數量
+    for trip in user_trips_me:
+        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
     
     # 新增：獲取地區和景點類型用於搜尋下拉選單
     regions = Region.objects.all().order_by('name')
     attraction_types = AttractionType.objects.all().order_by('name')
     
-    ##
+
     context = {
         'attractions': attractions,
-        'user_trips': user_trips,
-        'user_trips_me': user_trips_me,
-        'user_favorites': user_favorites,  # 新增收藏資料
+        'user_trips': user_trips,           # 用於"最近行程"（用戶管理頁面）
+        'user_trips_me': user_trips_me,     # 用於"我的行程"（行程規劃頁面）
         'regions': regions,
         'attraction_types': attraction_types,
     }
@@ -672,21 +671,14 @@ def attraction_detail(request, attraction_id):
     """景點詳情頁面"""
     attraction = get_object_or_404(Attraction, id=attraction_id)
     
-    ## 獲取用戶的行程列表
-    user_trips= []
+    # 獲取用戶的行程列表
+    user_trips = []
     if request.user.is_authenticated:
-        user_trips= Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
+        user_trips = Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
     
-    ## 獲取用戶的行程列表
-    user_trips_me = []
-    if request.user.is_authenticated:
-        user_trips_me = Trip.objects.filter(user=request.user, end_date__gte=datetime.now())
-    
-    ##
     context = {
         'attraction': attraction,
         'user_trips': user_trips,
-        'user_trips_me': user_trips_me,
     }
     return render(request, 'travel/attraction_detail.html', context)
 
@@ -1006,152 +998,140 @@ def update_attraction_duration_view(request):
     
     return JsonResponse({'success': False, 'message': '無效的請求'})
 
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-
 @login_required
-@require_POST
 def get_favorite_status(request):
-    """獲取多個景點的收藏狀態"""
-    try:
-        data = json.loads(request.body)
-        attraction_ids = data.get('attraction_ids', [])
+    """獲取用戶的收藏狀態（用於前端顯示）"""
+    if request.method == 'GET':
+        attraction_id = request.GET.get('attraction_id')
         
-        if not attraction_ids:
+        if not attraction_id:
             return JsonResponse({
                 'success': False,
-                'error': '沒有提供景點ID'
+                'message': '缺少景點 ID'
             })
         
-        # 使用你現有的 Favorite 模型
-        user_favorites = Favorite.objects.filter(
-            user=request.user,
-            attraction_id__in=attraction_ids
-        ).values_list('attraction_id', flat=True)
-        
-        # 建立返回的數據結構
-        favorites = {}
-        for attraction_id in attraction_ids:
-            favorites[attraction_id] = attraction_id in user_favorites
-        
-        return JsonResponse({
-            'success': True,
-            'favorites': favorites
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': '無效的JSON數據'
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
-
-# 同時更新 search_attractions_view 函數，使其在搜尋結果中包含收藏狀態
-def search_attractions_view(request):
-    search_query = request.GET.get('search', '')
-    region = request.GET.get('region', '')
-    attraction_type = request.GET.get('type', '')
-    
-    # 建立查詢
-    attractions = Attraction.objects.all()
-    
-    if search_query:
-        attractions = attractions.filter(
-            Q(name__icontains=search_query) | 
-            Q(description__icontains=search_query)
-        )
-    
-    if region and region != '地區 ▼':
-        attractions = attractions.filter(region__name=region)
-    
-    if attraction_type and attraction_type != '類型 ▼':
-        attractions = attractions.filter(attraction_type__name=attraction_type)
-    
-    # 預設圖片映射
-    default_images = {
-        '寺廟神社': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=300&h=180&fit=crop',
-        '現代景點': 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=180&fit=crop',
-        '自然風光': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=300&h=180&fit=crop',
-        '美食': 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=180&fit=crop',
-        '購物娛樂': 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=180&fit=crop'
-    }
-    
-    # 如果用戶已登入，獲取收藏狀態
-    user_favorites = set()
-    if request.user.is_authenticated:
-        user_favorites = set(
-            Favorite.objects.filter(
+        try:
+            attraction = get_object_or_404(Attraction, id=attraction_id)
+            is_favorited = Favorite.objects.filter(
                 user=request.user,
-                attraction__in=attractions
-            ).values_list('attraction_id', flat=True)
-        )
+                attraction=attraction
+            ).exists()
+            
+            return JsonResponse({
+                'success': True,
+                'is_favorited': is_favorited
+            })
+            
+        except Attraction.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': '景點不存在'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
     
-    attractions_data = []
-    for attr in attractions[:20]:  # 限制返回20個結果
-        attractions_data.append({
-            'id': attr.id,
-            'name': attr.name,
-            'location': f"{attr.region.name}・{attr.address}",
-            'type': attr.attraction_type.name,
-            'image': attr.image.url if attr.image else default_images.get(
-                attr.attraction_type.name, 
-                'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=300&h=180&fit=crop'
-            ),
-            'is_favorited': attr.id in user_favorites  # 添加收藏狀態
-        })
-    
-    return JsonResponse({'success': True, 'attractions': attractions_data})
+    return JsonResponse({
+        'success': False,
+        'message': '無效的請求方法'
+    })
 
-# 同時更新 home_view，在初始加載時也包含收藏狀態
 @login_required
-def home_view(request):
-    # 獲取景點資料
-    attractions = Attraction.objects.all()[:8]  # 顯示前8個景點
+def update_trip_dates_view(request):
+    """更新行程日期"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            trip_id = data.get('trip_id')
+            start_date = data.get('start_date')
+            end_date = data.get('end_date')
+            start_time = data.get('start_time', '09:00')
+            end_time = data.get('end_time', '18:00')
+            
+            # 驗證必要參數
+            if not all([trip_id, start_date, end_date]):
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少必要參數'
+                })
+            
+            # 獲取行程
+            trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+            
+            # 解析日期和時間
+            try:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                start_time_obj = datetime.strptime(start_time, '%H:%M').time()
+                end_time_obj = datetime.strptime(end_time, '%H:%M').time()
+                
+                # 組合完整的 datetime
+                start_datetime = datetime.combine(start_date_obj, start_time_obj)
+                end_datetime = datetime.combine(end_date_obj, end_time_obj)
+                
+            except ValueError as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'日期格式錯誤：{str(e)}'
+                })
+            
+            # 驗證日期邏輯
+            if end_datetime <= start_datetime:
+                return JsonResponse({
+                    'success': False,
+                    'message': '結束日期必須晚於開始日期'
+                })
+            
+            # 計算新舊日期的差異
+            old_start_date = trip.start_date.date()
+            old_end_date = trip.end_date.date()
+            
+            # 更新行程日期
+            trip.start_date = start_datetime
+            trip.end_date = end_datetime
+            trip.save()
+            
+            # 如果日期範圍改變，需要檢查並調整現有的行程安排
+            if old_start_date != start_date_obj or old_end_date != end_date_obj:
+                # 獲取所有相關的行程安排
+                itineraries = Itinerary.objects.filter(trip=trip)
+                
+                # 檢查哪些行程安排的日期超出了新的日期範圍
+                invalid_itineraries = itineraries.filter(
+                    Q(date__lt=start_date_obj) | Q(date__gt=end_date_obj)
+                )
+                
+                if invalid_itineraries.exists():
+                    # 可以選擇刪除超出範圍的安排，或者調整到有效日期
+                    # 這裡選擇刪除超出範圍的安排
+                    removed_count = invalid_itineraries.count()
+                    invalid_itineraries.delete()
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'行程日期已更新，移除了 {removed_count} 個超出日期範圍的景點安排',
+                        'removed_count': removed_count
+                    })
+            
+            return JsonResponse({
+                'success': True,
+                'message': '行程日期已成功更新'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'更新失敗：{str(e)}'
+            })
     
-    # 獲取用戶行程並計算景點數量
-    user_trips= Trip.objects.filter(user=request.user)[:3]  # 顯示前3個行程
-
-    ## 獲取用戶行程並計算景點數量
-    user_trips_me = Trip.objects.filter(user=request.user)  # 顯示前個行程
-    
-    ## 為每個行程添加景點數量
-    for trip in user_trips:
-        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
-    
-    ## 為每個行程添加景點數量
-    for trip in user_trips_me:
-        trip.total_attractions = Itinerary.objects.filter(trip=trip).count()
-    
-    # 獲取地區和景點類型用於搜尋下拉選單
-    regions = Region.objects.all().order_by('name')
-    attraction_types = AttractionType.objects.all().order_by('name')
-    
-    # 獲取用戶收藏的景點ID集合
-    user_favorites = set()
-    if request.user.is_authenticated:
-        user_favorites = set(
-            Favorite.objects.filter(user=request.user)
-            .values_list('attraction_id', flat=True)
-        )
-    
-    # 為每個景點添加收藏狀態
-    for attraction in attractions:
-        attraction.is_favorited = attraction.id in user_favorites
-
-    ##
-    context = {
-        'attractions': attractions,
-        'user_trips': user_trips,
-        'user_trips_me': user_trips_me,
-        'regions': regions,
-        'attraction_types': attraction_types,
-        'user_favorites': user_favorites,
-    }
-    return render(request, 'travel/home.html', context)
+    return JsonResponse({
+        'success': False,
+        'message': '無效的請求方法'
+    })

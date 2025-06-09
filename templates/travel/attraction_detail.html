@@ -11,8 +11,8 @@
             <button class="favorite-btn" onclick="toggleFavorite({{ attraction.id }})">
                 <span class="heart-icon">♡</span>
             </button>
-            <button class="share-btn" onclick="shareAttraction()">
-                <span class="share-icon">⌗</span>
+            <button class="share-btn-new" onclick="shareAttraction()">
+                分享景點
             </button>
         </div>
     </div>
@@ -35,8 +35,6 @@
                     <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=800&h=400&fit=crop" alt="{{ attraction.name }}" id="mainImage">
                 {% endif %}
             {% endif %}
-            
-            
         </div>
     </div>
 
@@ -138,7 +136,6 @@
                         <div class="stat-label">所在地區</div>
                         <div class="stat-value">{{ attraction.region.name }}</div>
                     </div>
-                   
                 </div>
             </div>
 
@@ -222,9 +219,10 @@
 .action-buttons {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
-.favorite-btn, .share-btn {
+.favorite-btn {
     width: 44px;
     height: 44px;
     border: 2px solid #e0e0e0;
@@ -243,9 +241,24 @@
     color: #ff69b4;
 }
 
-.share-btn:hover {
-    border-color: #ff69b4;
-    color: #ff69b4;
+/* 新的分享按鈕樣式 */
+.share-btn-new {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.share-btn-new:hover {
+    background: #138496;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
 }
 
 /* 圖片輪播 */
@@ -266,15 +279,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.image-dots {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
 }
 
 /* 景點標題區 */
@@ -585,13 +589,125 @@
         gap: 15px;
         align-items: flex-start;
     }
+    
+    .action-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
 }
 </style>
 {% csrf_token %}
 <script>
+// 確保使用一致的 showMessage 函數
+let isToastAnimationStylesLoaded = false;
+
+// 添加動畫樣式（防重複載入）
+function ensureToastAnimationStyles() {
+    if (!isToastAnimationStylesLoaded && !document.getElementById('toast-animations')) {
+        const style = document.createElement('style');
+        style.id = 'toast-animations';
+        style.textContent = `
+            @keyframes toastSlideIn {
+                0% { 
+                    transform: translateX(100%); 
+                    opacity: 0; 
+                }
+                100% { 
+                    transform: translateX(0); 
+                    opacity: 1; 
+                }
+            }
+            
+            @keyframes toastSlideOut {
+                0% { 
+                    transform: translateX(0); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translateX(100%); 
+                    opacity: 0; 
+                }
+            }
+            
+            @keyframes heartbeat {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        isToastAnimationStylesLoaded = true;
+    }
+}
+
+// 統一的 showMessage 函數（防重複顯示）
+function showMessage(message, type = 'info') {
+    // 移除現有的相同類型提示訊息
+    const existingToasts = document.querySelectorAll('.success-toast');
+    existingToasts.forEach(toast => {
+        if (toast.textContent === message) {
+            toast.remove();
+        }
+    });
+    
+    // 確保動畫樣式已載入
+    ensureToastAnimationStyles();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'success-toast';
+    
+    // 簡潔的樣式
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        animation: toastSlideIn 0.3s ease-out;
+        min-width: 180px;
+        text-align: center;
+        white-space: nowrap;
+    `;
+    
+    // 根據類型設置顏色
+    switch(type) {
+        case 'success':
+            messageDiv.style.background = '#28a745';
+            break;
+        case 'error':
+            messageDiv.style.background = '#dc3545';
+            break;
+        default:
+            messageDiv.style.background = '#17a2b8';
+    }
+    
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    
+    // 3秒後消失
+    setTimeout(() => {
+        if (messageDiv.parentElement) {
+            messageDiv.style.animation = 'toastSlideOut 0.3s ease-in forwards';
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.remove();
+                }
+            }, 300);
+        }
+    }, 3000);
+}
+
 // 頁面載入時執行的函數
 document.addEventListener('DOMContentLoaded', function() {
     console.log('頁面載入完成');
+    
+    // 載入動畫樣式
+    ensureToastAnimationStyles();
     
     // 檢查是否有記住的行程偏好
     const rememberedTrip = localStorage.getItem('preferred_trip_id');
@@ -759,9 +875,7 @@ function addToTrip(button) {
             }
             
             // 顯示成功訊息
-            if (typeof showMessage === 'function') {
-                showMessage(data.message, 'success');
-            }
+            showMessage(data.message, 'success');
             
             // 更新按鈕狀態
             button.style.background = '#28a745';
@@ -821,76 +935,46 @@ function toggleFavorite(attractionId) {
     });
 }
 
-// 分享景點
+// 分享景點 - 直接複製連結並顯示訊息
 function shareAttraction() {
-    if (navigator.share) {
-        navigator.share({
-            title: '{{ attraction.name }}',
-            text: '{{ attraction.description|truncatechars:100 }}',
-            url: window.location.href,
+    // 直接複製連結到剪貼板
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showMessage('連結已複製到剪貼板！', 'success');
+        }).catch(() => {
+            // 如果clipboard API失敗，使用舊方法
+            fallbackCopyToClipboard();
         });
     } else {
-        // 備用方案：複製連結到剪貼板
-        navigator.clipboard.writeText(window.location.href).then(() => {
-            showMessage('連結已複製到剪貼板', 'success');
-        });
+        // 如果clipboard API不可用，使用舊方法
+        fallbackCopyToClipboard();
     }
 }
 
-// 顯示訊息
-function showMessage(message, type = 'info') {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `alert alert-${type}`;
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        padding: 15px 20px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        animation: slideIn 0.3s ease;
-    `;
+// 備用複製方法
+function fallbackCopyToClipboard() {
+    const textArea = document.createElement('textarea');
+    textArea.value = window.location.href;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
     
-    switch(type) {
-        case 'success':
-            messageDiv.style.background = '#28a745';
-            break;
-        case 'error':
-            messageDiv.style.background = '#dc3545';
-            break;
-        default:
-            messageDiv.style.background = '#17a2b8';
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showMessage('連結已複製到剪貼板！', 'success');
+        } else {
+            showMessage('複製失敗，請手動複製連結', 'error');
+        }
+    } catch (err) {
+        showMessage('複製失敗，請手動複製連結', 'error');
+        console.error('複製失敗:', err);
     }
     
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
-    
-    setTimeout(() => {
-        messageDiv.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 300);
-    }, 3000);
+    document.body.removeChild(textArea);
 }
-
-// CSS 動畫
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
 </script>
 {% endblock %}
-

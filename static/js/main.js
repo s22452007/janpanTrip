@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始化加入行程按鈕事件
     bindAddToPlanEvents();
+    
+    // 初始化動畫樣式
+    addToastAnimationStyles();
 });
 
 // ========== 收藏功能相關函數 ==========
@@ -444,9 +447,7 @@ function addToTrip(button) {
             }
             
             // 顯示成功訊息
-            if (typeof showMessage === 'function') {
-                showMessage(data.message, 'success');
-            }
+            showMessage(data.message, 'success');
             
             // 更新按鈕狀態
             button.style.background = '#28a745';
@@ -541,28 +542,197 @@ function hideLoading() {
     }
 }
 
-// 顯示訊息
-function showMessage(message, type = 'info') {
-    const messageContainer = document.querySelector('.messages') || createMessageContainer();
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button class="close-btn" onclick="this.parentElement.remove()">×</button>
-    `;
-    
-    messageContainer.appendChild(alertDiv);
-    
-    // 5秒後自動移除
-    setTimeout(() => {
-        if (alertDiv.parentElement) {
-            alertDiv.remove();
-        }
-    }, 5000);
+
+// 確保使用一致的 showMessage 函數
+let isToastAnimationStylesLoaded = false;
+
+// 添加動畫樣式（防重複載入）
+function ensureToastAnimationStyles() {
+    if (!isToastAnimationStylesLoaded && !document.getElementById('toast-animations')) {
+        const style = document.createElement('style');
+        style.id = 'toast-animations';
+        style.textContent = `
+            @keyframes toastSlideIn {
+                0% { 
+                    transform: translateX(100%); 
+                    opacity: 0; 
+                }
+                100% { 
+                    transform: translateX(0); 
+                    opacity: 1; 
+                }
+            }
+            
+            @keyframes toastSlideOut {
+                0% { 
+                    transform: translateX(0); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translateX(100%); 
+                    opacity: 0; 
+                }
+            }
+            
+            @keyframes heartbeat {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        isToastAnimationStylesLoaded = true;
+    }
 }
 
-// 創建訊息容器
+// 重新命名函數以避免衝突
+function showToastMessage(message, type = 'info') {
+    // 移除現有的相同類型提示訊息
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => {
+        if (toast.textContent === message) {
+            toast.remove();
+        }
+    });
+    
+    // 確保動畫樣式已載入
+    ensureToastAnimationStyles();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'custom-toast';
+    
+    // 簡潔的樣式
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 99999;
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        animation: toastSlideIn 0.3s ease-out;
+        min-width: 180px;
+        text-align: center;
+        white-space: nowrap;
+    `;
+    
+    // 根據類型設置顏色
+    switch(type) {
+        case 'success':
+            messageDiv.style.background = '#28a745';
+            break;
+        case 'error':
+            messageDiv.style.background = '#dc3545';
+            break;
+        default:
+            messageDiv.style.background = '#17a2b8';
+    }
+    
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    
+    // 3秒後消失
+    setTimeout(() => {
+        if (messageDiv.parentElement) {
+            messageDiv.style.animation = 'toastSlideOut 0.3s ease-in forwards';
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.remove();
+                }
+            }, 300);
+        }
+    }, 3000);
+}
+
+// 分享景點 - 使用新的函數名稱
+function shareAttraction() {
+    console.log('shareAttraction 被調用'); // 調試用
+    
+    // 直接複製連結到剪貼板
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            console.log('複製成功，顯示提示'); // 調試用
+            showToastMessage('連結已複製到剪貼板！', 'success');
+        }).catch(() => {
+            console.log('clipboard API 失敗，使用備用方法'); // 調試用
+            fallbackCopyToClipboard();
+        });
+    } else {
+        console.log('clipboard API 不可用，使用備用方法'); // 調試用
+        fallbackCopyToClipboard();
+    }
+}
+
+// 備用複製方法
+function fallbackCopyToClipboard() {
+    const textArea = document.createElement('textarea');
+    textArea.value = window.location.href;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            console.log('備用方法複製成功'); // 調試用
+            showToastMessage('連結已複製到剪貼板！', 'success');
+        } else {
+            console.log('備用方法複製失敗'); // 調試用
+            showToastMessage('複製失敗，請手動複製連結', 'error');
+        }
+    } catch (err) {
+        console.log('備用方法發生錯誤:', err); // 調試用
+        showToastMessage('複製失敗，請手動複製連結', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// 收藏功能也使用新的函數名稱
+function toggleFavorite(attractionId) {
+    const favoriteBtn = document.querySelector('.favorite-btn');
+    const heartIcon = favoriteBtn.querySelector('.heart-icon');
+    
+    fetch('/toggle-favorite/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            attraction_id: attractionId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.is_favorite) {
+                heartIcon.textContent = '♥';
+                heartIcon.style.color = '#ff69b4';
+                showToastMessage('已加入收藏', 'success');
+            } else {
+                heartIcon.textContent = '♡';
+                heartIcon.style.color = '';
+                showToastMessage('已取消收藏', 'info');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('收藏操作失敗:', error);
+    });
+}
+
+// 其他函數保持不變...
+// (loadTripDates, showDateSelector, hideDateSelector, addToTrip 等函數保持原樣)
+</script>
+
+// 創建訊息容器（舊版本兼容）
 function createMessageContainer() {
     const container = document.createElement('div');
     container.className = 'messages';

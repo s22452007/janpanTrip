@@ -1536,19 +1536,34 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeDepartureTimes() {
     const arrivalInputs = document.querySelectorAll('[id^="arrival-time-"]');
     
+    console.log('=== 初始化離開時間 ===');
+    
     arrivalInputs.forEach(arrivalInput => {
         const itineraryId = arrivalInput.dataset.itineraryId;
         const departureInput = document.getElementById(`departure-time-${itineraryId}`);
         
-        if (departureInput && !departureInput.value) {
-            // 如果離開時間為空，根據到達時間設定預設值
-            const arrivalTime = arrivalInput.value || '09:00';
-            const defaultDeparture = calculateDefaultDepartureTime(arrivalTime);
-            departureInput.value = defaultDeparture;
+        if (departureInput && arrivalInput.value) {
+            // 檢查是否已經有離開時間值
+            if (departureInput.value && departureInput.value.trim() !== '') {
+                console.log(`景點 ${itineraryId}: 已有離開時間 ${departureInput.value}，跳過重新計算`);
+                return; // 已有值，不重新計算
+            }
             
-            console.log(`景點 ${itineraryId}: 到達 ${arrivalTime} → 離開 ${defaultDeparture}`);
+            // 只有在沒有離開時間時才計算
+            const arrivalTime = arrivalInput.value;
+            const duration = parseInt(departureInput.getAttribute('data-duration')) || 90;
+            
+            const arrivalMinutes = timeToMinutes(arrivalTime);
+            const departureMinutes = arrivalMinutes + duration;
+            const departureTime = minutesToTime(departureMinutes);
+            
+            departureInput.value = departureTime;
+            
+            console.log(`景點 ${itineraryId}: 自動計算 ${arrivalTime} + ${duration}分鐘 → ${departureTime}`);
         }
     });
+    
+    console.log('離開時間初始化完成');
 }
 
 // 計算預設離開時間

@@ -538,6 +538,7 @@
 
 {% block extra_js %}
 <script>
+// === 標籤頁切換功能 ===
 function switchTab(tabName) {
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.classList.remove('active');
@@ -548,9 +549,16 @@ function switchTab(tabName) {
     
     event.target.classList.add('active');
     document.getElementById(tabName).classList.add('active');
+    
+    // 切換標籤後重新載入收藏狀態
+    setTimeout(() => {
+        if (typeof loadFavoriteStates === 'function') {
+            loadFavoriteStates();
+        }
+    }, 100);
 }
 
-/// 搜尋功能
+// === 搜尋功能 ===
 function performSearch() {
     const searchInput = document.querySelector('.search-input');
     const regionSelect = document.getElementById('region-filter');
@@ -560,7 +568,7 @@ function performSearch() {
     const region = regionSelect.value;
     const type = typeSelect.value;
     
-    console.log('搜尋參數:', { searchQuery, region, type }); // 調試用
+    console.log('搜尋參數:', { searchQuery, region, type });
     
     // 構建查詢參數
     const params = new URLSearchParams();
@@ -572,9 +580,16 @@ function performSearch() {
     fetch('/search-attractions/?' + params.toString())
         .then(response => response.json())
         .then(data => {
-            console.log('搜尋結果:', data); // 調試用
+            console.log('搜尋結果:', data);
             if (data.success) {
                 displaySearchResults(data.attractions);
+                // 搜尋完成後重新載入收藏狀態
+                setTimeout(() => {
+                    if (typeof loadFavoriteStates === 'function') {
+                        console.log('搜尋完成，重新載入收藏狀態');
+                        loadFavoriteStates();
+                    }
+                }, 300);
             } else {
                 alert('搜尋失敗，請稍後再試');
             }
@@ -585,7 +600,7 @@ function performSearch() {
         });
 }
 
-// 顯示搜尋結果（移除顯示所有景點按鈕）
+// 顯示搜尋結果
 function displaySearchResults(attractions) {
     const attractionsGrid = document.querySelector('.attractions-grid');
     
@@ -620,11 +635,11 @@ function displaySearchResults(attractions) {
         </div>
     `).join('');
     
-    // 直接顯示搜尋結果，不添加顯示所有景點按鈕
+    // 顯示搜尋結果
     attractionsGrid.innerHTML = attractionCards;
 }
 
-// 清除搜尋（可以保留這個函數，用於其他地方調用）
+// 清除搜尋
 function clearSearch() {
     document.querySelector('.search-input').value = '';
     document.getElementById('region-filter').value = ''; 
@@ -634,165 +649,23 @@ function clearSearch() {
     window.location.reload();
 }
 
-// 綁定搜尋按鈕事件
-document.addEventListener('DOMContentLoaded', function() {
-    const searchBtn = document.querySelector('.search-btn');
-    const searchInput = document.querySelector('.search-input');
-    
-    // 點擊搜尋按鈕
-    if (searchBtn) {
-        searchBtn.addEventListener('click', performSearch);
-    }
-    
-    // 按 Enter 鍵搜尋
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-    }
-    
-    // 下拉選單變更時自動搜尋 - 使用正確的 ID
-    const regionFilter = document.getElementById('region-filter');
-    const typeFilter = document.getElementById('type-filter');
-    
-    if (regionFilter) {
-        regionFilter.addEventListener('change', performSearch);
-    }
-    if (typeFilter) {
-        typeFilter.addEventListener('change', performSearch);
-    }
-    
-    document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const attractionId = this.getAttribute('data-attraction-id');
-            fetch('/add-to-plan/' + attractionId + '/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.style.background = '#28a745';
-                    this.textContent = '已加入';
-                    setTimeout(() => {
-                        this.style.background = '#ff69b4';
-                        this.textContent = '加入行程';
-                    }, 2000);
-                }
-            });
-        });
-    });
-});
-
-// 收藏功能
-function toggleFavorite(attractionId, button) {
-    const heartIcon = button.querySelector('.heart-icon');
-    const isFavorited = button.classList.contains('favorited');
-    
-    // 獲取 CSRF token
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (!csrfToken) {
-        alert('安全驗證失敗，請刷新頁面後重試');
-        return;
-    }
-    
-    fetch('/toggle-favorite/' + attractionId + '/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken.value,
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            if (data.is_favorited) {
-                // 加入收藏
-                button.classList.add('favorited');
-                heartIcon.textContent = '❤️';
-                
-                // 顯示提示訊息
-                showMessage('已加入收藏！', 'success');
-                
-                // 愛心跳動動畫
-                button.style.animation = 'heartbeat 0.6s ease-in-out';
-                setTimeout(() => {
-                    button.style.animation = '';
-                }, 600);
-                
-            } else {
-                // 取消收藏
-                button.classList.remove('favorited');
-                heartIcon.textContent = '🤍';
-                
-                // 顯示提示訊息
-                showMessage('已取消收藏', 'info');
-            }
-        } else {
-            alert('操作失敗：' + (data.error || '未知錯誤'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('網路錯誤，請稍後再試');
-    });
-}
-
-// 顯示提示訊息的函數
-function showMessage(message, type) {
-    if (!type) type = 'info';
-    
-    // 創建提示元素
-    const messageDiv = document.createElement('div');
-    const bgColor = type === 'success' ? '#28a745' : '#17a2b8';
-    
-    messageDiv.style.position = 'fixed';
-    messageDiv.style.top = '20px';
-    messageDiv.style.right = '20px';
-    messageDiv.style.background = bgColor;
-    messageDiv.style.color = 'white';
-    messageDiv.style.padding = '15px 20px';
-    messageDiv.style.borderRadius = '8px';
-    messageDiv.style.zIndex = '9999';
-    messageDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-    messageDiv.style.fontWeight = '500';
-    messageDiv.textContent = message;
-    
-    // 添加到頁面
-    document.body.appendChild(messageDiv);
-    
-    // 3秒後自動移除
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
-        }
-    }, 3000);
-}
-
-// 新增的景點詳情查看函數
+// === 景點詳情查看函數 ===
 function viewAttractionDetail(attractionId) {
     // 跳轉到景點詳情頁面
     window.location.href = '/attraction/' + attractionId + '/';
 }
 
-// 查看行程函數
+// === 行程管理函數 ===
 function viewTrip(tripId) {
-    console.log('查看行程 ID:', tripId); // 調試用
+    console.log('查看行程 ID:', tripId);
     window.location.href = '/trip/view/' + tripId + '/';
 }
 
-// 編輯行程函數
 function editTrip(tripId) {
-    console.log('編輯行程 ID:', tripId); // 調試用
+    console.log('編輯行程 ID:', tripId);
     window.location.href = '/trip/edit/' + tripId + '/';
 }
 
-// 刪除行程函數
 function deleteTrip(tripId) {
     if (confirm('確定要刪除這個行程嗎？此操作無法復原。')) {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -825,8 +698,40 @@ function deleteTrip(tripId) {
     }
 }
 
-// AJAX 加入行程功能（保持原有的功能）
+// === 頁面初始化 ===
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('home.html: 頁面載入完成');
+    
+    // 綁定搜尋按鈕事件
+    const searchBtn = document.querySelector('.search-btn');
+    const searchInput = document.querySelector('.search-input');
+    
+    // 點擊搜尋按鈕
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+    }
+    
+    // 按 Enter 鍵搜尋
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+    
+    // 下拉選單變更時自動搜尋
+    const regionFilter = document.getElementById('region-filter');
+    const typeFilter = document.getElementById('type-filter');
+    
+    if (regionFilter) {
+        regionFilter.addEventListener('change', performSearch);
+    }
+    if (typeFilter) {
+        typeFilter.addEventListener('change', performSearch);
+    }
+    
+    // 綁定加入行程按鈕事件
     document.querySelectorAll('.add-to-plan-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const attractionId = this.getAttribute('data-attraction-id');
@@ -857,6 +762,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeTab === 'profile') {
         switchTab('profile');
     }
+    
+    // 確保 main.js 已載入，然後載入收藏狀態
+    setTimeout(() => {
+        if (typeof loadFavoriteStates === 'function') {
+            console.log('home.html: 開始載入收藏狀態');
+            loadFavoriteStates();
+        } else {
+            console.warn('home.html: loadFavoriteStates 函數未找到，請檢查 main.js 是否正確載入');
+            
+            // 如果 main.js 沒有載入，嘗試再次檢查
+            setTimeout(() => {
+                if (typeof loadFavoriteStates === 'function') {
+                    console.log('home.html: 延遲載入收藏狀態');
+                    loadFavoriteStates();
+                } else {
+                    console.error('home.html: main.js 可能沒有正確載入，收藏功能可能無法使用');
+                }
+            }, 1000);
+        }
+    }, 500);
 });
+
+// 注意：toggleFavorite 函數已移除，統一使用 main.js 中的版本
+// 如果 main.js 中的 toggleFavorite 函數無法使用，請檢查控制台錯誤訊息
 </script>
 {% endblock %}

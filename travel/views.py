@@ -1001,7 +1001,46 @@ def update_attraction_duration_view(request):
 @login_required
 def get_favorite_status(request):
     """獲取用戶的收藏狀態（用於前端顯示）"""
-    if request.method == 'GET':
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            attraction_ids = data.get('attraction_ids', [])
+            
+            if not attraction_ids:
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少景點 ID'
+                })
+            
+            # 獲取用戶收藏的景點ID列表
+            favorited_attractions = Favorite.objects.filter(
+                user=request.user,
+                attraction_id__in=attraction_ids
+            ).values_list('attraction_id', flat=True)
+            
+            # 建立收藏狀態字典
+            favorites = {}
+            for attraction_id in attraction_ids:
+                favorites[attraction_id] = attraction_id in favorited_attractions
+            
+            return JsonResponse({
+                'success': True,
+                'favorites': favorites
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+    
+    elif request.method == 'GET':
+        # 保持原有的單個景點查詢功能
         attraction_id = request.GET.get('attraction_id')
         
         if not attraction_id:
